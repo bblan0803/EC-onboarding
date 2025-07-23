@@ -313,7 +313,6 @@ MIT License - see LICENSE file for details
 
 For questions or issues:
 - Create a GitHub issue
-- Contact: mbh@amazon.com
 - AWS Support for ElastiCache questions
 
 ---
