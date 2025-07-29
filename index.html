@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏆 Valkey Serverless Leaderboard - Live Demo</title>
+    <title>🏆 Valkey Serverless Leaderboard - Live</title>
     <style>
         * {
             margin: 0;
@@ -40,16 +40,31 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
         
-        .demo-badge {
-            background: rgba(255,255,255,0.2);
+        .live-badge {
+            background: #4CAF50;
             color: white;
             padding: 8px 20px;
             border-radius: 25px;
             font-size: 0.9em;
             font-weight: bold;
             display: inline-block;
-            margin-top: 15px;
+            margin: 10px 5px;
             border: 2px solid rgba(255,255,255,0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        .api-info {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
         }
         
         .main-content {
@@ -72,6 +87,27 @@
             margin-bottom: 20px;
             font-size: 1.5em;
         }
+        
+        .connection-status {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-connected { background: #4CAF50; }
+        .status-disconnected { background: #f44336; }
+        .status-connecting { background: #ff9800; animation: pulse 1s infinite; }
         
         .form-group {
             margin-bottom: 15px;
@@ -115,6 +151,12 @@
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .btn.secondary {
@@ -211,34 +253,30 @@
             100% { transform: rotate(360deg); }
         }
         
-        .tech-info {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 10px;
-            padding: 20px;
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
             margin-top: 20px;
         }
         
-        .tech-info h3 {
-            color: #495057;
-            margin-bottom: 15px;
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
         }
         
-        .tech-stack {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
         }
         
-        .tech-item {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-        
-        .tech-item strong {
-            color: #667eea;
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
         }
         
         @media (max-width: 768px) {
@@ -258,12 +296,22 @@
     <div class="container">
         <div class="header">
             <h1>🏆 Valkey Serverless Leaderboard</h1>
-            <div class="demo-badge">🚀 DEMO - Powered by AWS Lambda & Valkey Serverless</div>
-            <p>Real-time gaming leaderboard with serverless architecture</p>
+            <div class="live-badge">🔴 LIVE</div>
+            <div class="live-badge">🚀 Serverless</div>
+            <div class="live-badge">☁️ AWS</div>
+            <p>Real-time gaming leaderboard powered by AWS Lambda & Valkey Serverless</p>
+            <div class="api-info">
+                <strong>API Endpoint:</strong> https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com
+            </div>
         </div>
         
         <div class="main-content">
             <div class="section">
+                <div class="connection-status">
+                    <span class="status-indicator status-connecting" id="statusIndicator"></span>
+                    <span id="connectionStatus">Connecting to Valkey Serverless...</span>
+                </div>
+                
                 <h2>🎮 Add Your Score</h2>
                 <form id="scoreForm">
                     <div class="form-group">
@@ -274,64 +322,52 @@
                         <label for="playerScore">Score</label>
                         <input type="number" id="playerScore" placeholder="Enter your score" required min="0">
                     </div>
-                    <button type="submit" class="btn">🚀 Submit Score</button>
+                    <button type="submit" class="btn" id="submitBtn">🚀 Submit to Valkey</button>
                 </form>
                 <div id="scoreMessage"></div>
             </div>
             
             <div class="section">
                 <h2>⚡ Quick Actions</h2>
+                <button class="btn secondary" onclick="checkHealth()">🔍 Test Connection</button>
                 <button class="btn secondary" onclick="refreshLeaderboard()">🔄 Refresh Leaderboard</button>
-                <button class="btn secondary" onclick="addSampleData()">🎲 Add Sample Data</button>
                 <div id="actionMessage"></div>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <span class="stat-number" id="totalPlayers">-</span>
+                        <span class="stat-label">Total Players</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="topScore">-</span>
+                        <span class="stat-label">Top Score</span>
+                    </div>
+                </div>
             </div>
             
             <div class="section leaderboard">
-                <h2>🏅 Live Leaderboard</h2>
+                <h2>🏅 Live Leaderboard (Real Valkey Data)</h2>
                 <ul class="leaderboard-list" id="leaderboardList">
-                    <li class="message info">Demo leaderboard loaded...</li>
+                    <li class="message info">Loading real data from Valkey Serverless...</li>
                 </ul>
-            </div>
-            
-            <div class="section tech-info">
-                <h3>🛠️ Technology Stack</h3>
-                <div class="tech-stack">
-                    <div class="tech-item">
-                        <strong>Frontend:</strong><br>
-                        HTML5, CSS3, JavaScript
-                    </div>
-                    <div class="tech-item">
-                        <strong>Backend:</strong><br>
-                        AWS Lambda (Python 3.9)
-                    </div>
-                    <div class="tech-item">
-                        <strong>Database:</strong><br>
-                        Valkey Serverless (Redis-compatible)
-                    </div>
-                    <div class="tech-item">
-                        <strong>Infrastructure:</strong><br>
-                        AWS VPC, Security Groups, TLS
-                    </div>
-                </div>
-                <div class="message info" style="margin-top: 15px;">
-                    <strong>🔐 Security Note:</strong> This demo uses simulated data due to AWS security policies. 
-                    The actual Lambda function is fully functional and connected to a real Valkey Serverless cluster 
-                    with TLS encryption and proper VPC configuration.
-                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Demo data that simulates your real Valkey data
-        let demoLeaderboard = [
-            { player: 'RealConnectionTest', score: 9999 },
-            { player: 'Alice', score: 3500 },
-            { player: 'Charlie', score: 3200 },
-            { player: 'Bob', score: 1800 },
-            { player: 'Diana', score: 1500 },
-            { player: 'TestPlayer', score: 1000 }
-        ];
+        // Real API configuration - your actual public endpoints
+        const API_BASE_URL = 'https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com';
+        
+        let connectionStatus = 'connecting';
+
+        function updateConnectionStatus(status, message) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('connectionStatus');
+            
+            indicator.className = `status-indicator status-${status}`;
+            statusText.textContent = message;
+            connectionStatus = status;
+        }
 
         function showMessage(elementId, message, type = 'info') {
             const element = document.getElementById(elementId);
@@ -346,11 +382,83 @@
             element.innerHTML = `<div class="message info"><span class="loading"></span>${message}</div>`;
         }
 
+        function updateStats(leaderboard) {
+            document.getElementById('totalPlayers').textContent = leaderboard.length;
+            document.getElementById('topScore').textContent = leaderboard.length > 0 ? leaderboard[0].score.toLocaleString() : '0';
+        }
+
+        // Real API call to your AWS Lambda function
+        async function callAPI(endpoint, method = 'GET', body = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API call failed:', error);
+                throw error;
+            }
+        }
+
+        async function checkHealth() {
+            showLoading('actionMessage', 'Testing connection to Valkey Serverless...');
+            updateConnectionStatus('connecting', 'Testing connection...');
+            
+            try {
+                const data = await callAPI('/health');
+                
+                if (data.success && data.ping === 'PONG') {
+                    showMessage('actionMessage', `✅ Connection successful! Valkey responded: ${data.ping}`, 'success');
+                    updateConnectionStatus('connected', 'Connected to Valkey Serverless');
+                } else {
+                    showMessage('actionMessage', '❌ Unexpected response from Valkey', 'error');
+                    updateConnectionStatus('disconnected', 'Connection failed');
+                }
+            } catch (error) {
+                showMessage('actionMessage', `❌ Connection failed: ${error.message}`, 'error');
+                updateConnectionStatus('disconnected', 'Connection failed');
+            }
+        }
+
+        async function refreshLeaderboard() {
+            showLoading('actionMessage', 'Fetching real data from Valkey...');
+            
+            try {
+                const data = await callAPI('/leaderboard');
+                
+                displayLeaderboard(data.leaderboard);
+                updateStats(data.leaderboard);
+                showMessage('actionMessage', `✅ Leaderboard refreshed! ${data.leaderboard.length} players loaded from Valkey`, 'success');
+                
+                if (connectionStatus !== 'connected') {
+                    updateConnectionStatus('connected', 'Connected to Valkey Serverless');
+                }
+            } catch (error) {
+                showMessage('actionMessage', `❌ Failed to load leaderboard: ${error.message}`, 'error');
+                updateConnectionStatus('disconnected', 'Connection failed');
+            }
+        }
+
         function displayLeaderboard(leaderboard) {
             const list = document.getElementById('leaderboardList');
             
             if (leaderboard.length === 0) {
-                list.innerHTML = '<li class="message info">No players yet. Be the first to add your score!</li>';
+                list.innerHTML = '<li class="message info">No players in Valkey yet. Be the first to add your score!</li>';
                 return;
             }
             
@@ -363,104 +471,74 @@
             `).join('');
         }
 
-        function refreshLeaderboard() {
-            showLoading('actionMessage', 'Refreshing leaderboard...');
-            
-            // Simulate API call delay
-            setTimeout(() => {
-                displayLeaderboard(demoLeaderboard);
-                showMessage('actionMessage', '✅ Leaderboard refreshed!', 'success');
-            }, 800);
-        }
-
-        function addSampleData() {
-            showLoading('actionMessage', 'Adding sample data...');
-            
-            const samplePlayers = [
-                { player: 'GameMaster', score: 5000 },
-                { player: 'ProGamer', score: 4200 },
-                { player: 'Rookie', score: 800 }
-            ];
-            
-            setTimeout(() => {
-                // Add sample players to demo data
-                samplePlayers.forEach(player => {
-                    const existingIndex = demoLeaderboard.findIndex(p => p.player === player.player);
-                    if (existingIndex >= 0) {
-                        demoLeaderboard[existingIndex].score = player.score;
-                    } else {
-                        demoLeaderboard.push(player);
-                    }
-                });
-                
-                // Sort by score descending
-                demoLeaderboard.sort((a, b) => b.score - a.score);
-                
-                displayLeaderboard(demoLeaderboard);
-                showMessage('actionMessage', '✅ Sample data added successfully!', 'success');
-            }, 1000);
-        }
-
-        // Form submission
+        // Form submission - REAL data to Valkey
         document.getElementById('scoreForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const playerName = document.getElementById('playerName').value.trim();
             const playerScore = parseInt(document.getElementById('playerScore').value);
+            const submitBtn = document.getElementById('submitBtn');
             
             if (!playerName || isNaN(playerScore) || playerScore < 0) {
                 showMessage('scoreMessage', '❌ Please enter valid player name and score', 'error');
                 return;
             }
             
-            showLoading('scoreMessage', 'Submitting score...');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Saving to Valkey...';
+            showLoading('scoreMessage', 'Saving to Valkey Serverless...');
             
-            // Simulate API call
-            setTimeout(() => {
-                // Update demo data
-                const existingIndex = demoLeaderboard.findIndex(p => p.player === playerName);
-                if (existingIndex >= 0) {
-                    demoLeaderboard[existingIndex].score = playerScore;
+            try {
+                const data = await callAPI('/score', 'POST', {
+                    player: playerName,
+                    score: playerScore
+                });
+                
+                if (data.success) {
+                    showMessage('scoreMessage', `✅ ${data.message} - Saved to Valkey!`, 'success');
+                    document.getElementById('scoreForm').reset();
+                    await refreshLeaderboard(); // Refresh to show updated data
                 } else {
-                    demoLeaderboard.push({ player: playerName, score: playerScore });
+                    showMessage('scoreMessage', `❌ ${data.error}`, 'error');
                 }
-                
-                // Sort by score descending
-                demoLeaderboard.sort((a, b) => b.score - a.score);
-                
-                showMessage('scoreMessage', `✅ Score updated for ${playerName}: ${playerScore.toLocaleString()}`, 'success');
-                document.getElementById('scoreForm').reset();
-                displayLeaderboard(demoLeaderboard);
-            }, 1000);
+            } catch (error) {
+                showMessage('scoreMessage', `❌ Failed to save score: ${error.message}`, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Submit to Valkey';
+            }
         });
 
         // Initialize the app
-        window.addEventListener('load', () => {
-            displayLeaderboard(demoLeaderboard);
-            
-            // Show info about the real backend
-            console.log(`
-🏆 Valkey Serverless Leaderboard Demo
-
-This demo shows the frontend interface for a real serverless leaderboard system:
-
-Backend Components (Fully Functional):
-✅ AWS Lambda Function: valkey-connectivity-test
-✅ Valkey Serverless Cluster: valkey-leaderboard-public
-✅ TLS Connection: Properly configured
-✅ VPC Security: Production-ready setup
-✅ Real Data Storage: All scores persist in Valkey
-
-The actual Lambda function successfully:
-- Connects to Valkey Serverless with TLS
-- Stores and retrieves leaderboard data
-- Handles health checks and API requests
-- Processes real-time score updates
-
-This frontend demonstrates the user experience while the backend
-runs securely in your AWS environment.
-            `);
+        window.addEventListener('load', async () => {
+            try {
+                await checkHealth();
+                await refreshLeaderboard();
+                
+                // Auto-refresh leaderboard every 30 seconds
+                setInterval(refreshLeaderboard, 30000);
+            } catch (error) {
+                updateConnectionStatus('disconnected', 'Failed to connect');
+                showMessage('actionMessage', '⚠️ Failed to connect to API. Please check your connection.', 'error');
+            }
         });
+
+        // Show API info in console
+        console.log(`
+🏆 Valkey Serverless Leaderboard - LIVE
+
+✅ Connected to real AWS infrastructure:
+   • API Gateway: ${API_BASE_URL}
+   • Lambda Function: valkey-connectivity-test
+   • Valkey Cluster: valkey-leaderboard-public
+   • Region: us-west-2
+
+🚀 This is a fully serverless application:
+   • No local dependencies
+   • Real-time data persistence
+   • Auto-scaling infrastructure
+   • Production-ready architecture
+        `);
     </script>
 </body>
 </html>
