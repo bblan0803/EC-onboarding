@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏆 Valkey Serverless Leaderboard - WORKING</title>
+    <title>🏆 Valkey Serverless Leaderboard - CORS Proxy</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -29,6 +29,7 @@
         .success { background: rgba(76, 175, 80, 0.8); }
         .error { background: rgba(244, 67, 54, 0.8); }
         .loading { background: rgba(255, 152, 0, 0.8); }
+        .warning { background: rgba(255, 193, 7, 0.8); color: black; }
         button {
             background: #4CAF50;
             color: white;
@@ -40,12 +41,14 @@
             font-size: 16px;
         }
         button:hover { background: #45a049; }
+        button:disabled { background: #666; cursor: not-allowed; }
         input {
             padding: 10px;
             margin: 5px;
             border: none;
             border-radius: 5px;
             font-size: 16px;
+            color: black;
         }
         .leaderboard {
             background: rgba(255,255,255,0.1);
@@ -61,6 +64,23 @@
             background: rgba(255,255,255,0.1);
             border-radius: 5px;
         }
+        .player:nth-child(1) { background: rgba(255, 215, 0, 0.3); }
+        .player:nth-child(2) { background: rgba(192, 192, 192, 0.3); }
+        .player:nth-child(3) { background: rgba(205, 127, 50, 0.3); }
+        .method-selector {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        .method-selector label {
+            display: block;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        .method-selector input[type="radio"] {
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -68,19 +88,36 @@
         <h1>🏆 Valkey Serverless Leaderboard</h1>
         <p><strong>API:</strong> https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com</p>
         
+        <div class="method-selector">
+            <h3>🔧 Connection Method</h3>
+            <label>
+                <input type="radio" name="method" value="direct" checked>
+                <strong>Direct Connection</strong> - Try connecting directly to API
+            </label>
+            <label>
+                <input type="radio" name="method" value="proxy">
+                <strong>CORS Proxy</strong> - Use proxy to bypass CORS (if direct fails)
+            </label>
+            <label>
+                <input type="radio" name="method" value="jsonp">
+                <strong>Server-Side Fetch</strong> - Alternative method
+            </label>
+        </div>
+        
         <div id="status" class="status loading">🔄 Testing connection...</div>
         
         <div>
             <h3>🎮 Add Your Score</h3>
             <input type="text" id="playerName" placeholder="Player Name" />
             <input type="number" id="playerScore" placeholder="Score" />
-            <button onclick="addScore()">🚀 Add Score</button>
+            <button onclick="addScore()" id="addScoreBtn">🚀 Add Score</button>
         </div>
         
         <div>
             <h3>⚡ Actions</h3>
             <button onclick="testHealth()">🔍 Test Health</button>
             <button onclick="loadLeaderboard()">🔄 Load Leaderboard</button>
+            <button onclick="switchMethod()">🔄 Switch Method</button>
         </div>
         
         <div class="leaderboard">
@@ -90,18 +127,20 @@
         
         <div>
             <h3>🔧 Debug Info</h3>
-            <div id="debug" style="font-family: monospace; font-size: 12px;"></div>
+            <div id="debug" style="font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
         </div>
     </div>
 
     <script>
         const API_URL = 'https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com';
+        const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
         let debugLog = [];
+        let currentMethod = 'direct';
 
         function log(message) {
             const timestamp = new Date().toLocaleTimeString();
             debugLog.push(`${timestamp}: ${message}`);
-            document.getElementById('debug').innerHTML = debugLog.slice(-10).join('<br>');
+            document.getElementById('debug').innerHTML = debugLog.slice(-15).join('<br>');
             console.log(message);
         }
 
@@ -112,13 +151,25 @@
             log(`Status: ${message}`);
         }
 
+        function getCurrentMethod() {
+            const selected = document.querySelector('input[name="method"]:checked');
+            return selected ? selected.value : 'direct';
+        }
+
+        function switchMethod() {
+            currentMethod = getCurrentMethod();
+            log(`Switched to method: ${currentMethod}`);
+            testHealth();
+        }
+
         async function apiCall(endpoint, method = 'GET', body = null) {
-            log(`Making ${method} request to ${endpoint}`);
+            currentMethod = getCurrentMethod();
+            log(`Making ${method} request to ${endpoint} using ${currentMethod} method`);
             
             try {
-                const options = {
+                let url = `${API_URL}${endpoint}`;
+                let options = {
                     method: method,
-                    mode: 'cors',
                     headers: {
                         'Content-Type': 'application/json',
                     }
@@ -129,8 +180,32 @@
                     log(`Request body: ${JSON.stringify(body)}`);
                 }
 
-                const response = await fetch(`${API_URL}${endpoint}`, options);
+                // Try different methods based on selection
+                if (currentMethod === 'proxy') {
+                    // Use CORS proxy for GET requests
+                    if (method === 'GET') {
+                        url = `${CORS_PROXY}${encodeURIComponent(url)}`;
+                        options.mode = 'cors';
+                    } else {
+                        // For POST, try direct first
+                        options.mode = 'cors';
+                    }
+                } else if (currentMethod === 'jsonp') {
+                    // Use fetch with no-cors mode (limited functionality)
+                    options.mode = 'no-cors';
+                } else {
+                    // Direct method
+                    options.mode = 'cors';
+                }
+
+                log(`Fetching: ${url}`);
+                const response = await fetch(url, options);
                 log(`Response status: ${response.status}`);
+                
+                if (currentMethod === 'jsonp' && response.type === 'opaque') {
+                    // no-cors mode doesn't give us access to response data
+                    throw new Error('no-cors mode - cannot read response');
+                }
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -141,6 +216,12 @@
                 return data;
             } catch (error) {
                 log(`API Error: ${error.message}`);
+                
+                // If direct method fails, suggest trying proxy
+                if (currentMethod === 'direct' && error.message.includes('fetch')) {
+                    setStatus('❌ Direct connection failed. Try CORS Proxy method above.', 'warning');
+                }
+                
                 throw error;
             }
         }
@@ -149,13 +230,16 @@
             setStatus('🔄 Testing health...', 'loading');
             try {
                 const data = await apiCall('/health');
-                if (data.success && data.ping === 'PONG') {
-                    setStatus(`✅ Connected! Ping: ${data.ping}`, 'success');
+                if (data && data.success && data.ping === 'PONG') {
+                    setStatus(`✅ Connected via ${currentMethod}! Ping: ${data.ping}`, 'success');
+                    return true;
                 } else {
                     setStatus('❌ Unexpected response', 'error');
+                    return false;
                 }
             } catch (error) {
                 setStatus(`❌ Health check failed: ${error.message}`, 'error');
+                return false;
             }
         }
 
@@ -163,8 +247,12 @@
             setStatus('🔄 Loading leaderboard...', 'loading');
             try {
                 const data = await apiCall('/leaderboard');
-                displayLeaderboard(data.leaderboard);
-                setStatus(`✅ Loaded ${data.leaderboard.length} players`, 'success');
+                if (data && data.leaderboard) {
+                    displayLeaderboard(data.leaderboard);
+                    setStatus(`✅ Loaded ${data.leaderboard.length} players via ${currentMethod}`, 'success');
+                } else {
+                    throw new Error('Invalid leaderboard data');
+                }
             } catch (error) {
                 setStatus(`❌ Failed to load leaderboard: ${error.message}`, 'error');
                 document.getElementById('leaderboard').innerHTML = `Error: ${error.message}`;
@@ -174,31 +262,38 @@
         async function addScore() {
             const name = document.getElementById('playerName').value.trim();
             const score = parseInt(document.getElementById('playerScore').value);
+            const btn = document.getElementById('addScoreBtn');
             
             if (!name || isNaN(score)) {
                 setStatus('❌ Please enter valid name and score', 'error');
                 return;
             }
             
+            btn.disabled = true;
+            btn.textContent = '⏳ Adding...';
             setStatus('🔄 Adding score...', 'loading');
+            
             try {
                 const data = await apiCall('/score', 'POST', { player: name, score: score });
-                if (data.success) {
+                if (data && data.success) {
                     setStatus(`✅ ${data.message}`, 'success');
                     document.getElementById('playerName').value = '';
                     document.getElementById('playerScore').value = '';
                     await loadLeaderboard();
                 } else {
-                    setStatus(`❌ ${data.error}`, 'error');
+                    setStatus(`❌ ${data ? data.error : 'Unknown error'}`, 'error');
                 }
             } catch (error) {
                 setStatus(`❌ Failed to add score: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 Add Score';
             }
         }
 
         function displayLeaderboard(players) {
             const leaderboardDiv = document.getElementById('leaderboard');
-            if (players.length === 0) {
+            if (!players || players.length === 0) {
                 leaderboardDiv.innerHTML = 'No players yet!';
                 return;
             }
@@ -211,14 +306,24 @@
             `).join('');
         }
 
+        // Event listeners
+        document.querySelectorAll('input[name="method"]').forEach(radio => {
+            radio.addEventListener('change', switchMethod);
+        });
+
         // Initialize
         window.addEventListener('load', async () => {
             log('Application starting...');
-            await testHealth();
-            await loadLeaderboard();
             
-            // Auto-refresh every 30 seconds
-            setInterval(loadLeaderboard, 30000);
+            // Try direct connection first
+            const healthOk = await testHealth();
+            if (healthOk) {
+                await loadLeaderboard();
+                // Auto-refresh every 30 seconds if connection is working
+                setInterval(loadLeaderboard, 30000);
+            } else {
+                setStatus('❌ Direct connection failed. Try selecting "CORS Proxy" method above and click "Switch Method"', 'warning');
+            }
         });
     </script>
 </body>
