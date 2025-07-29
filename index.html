@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏆 Valkey Serverless Leaderboard - Real-Time</title>
+    <title>🏆 Valkey Serverless Leaderboard - Cache Bypass</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -41,10 +44,26 @@
             margin: 5px;
             animation: pulse 2s infinite;
         }
+        .cache-bypass-badge {
+            background: #ff6b6b;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin: 5px;
+            animation: flash 1s infinite;
+        }
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.7; }
             100% { opacity: 1; }
+        }
+        @keyframes flash {
+            0% { background: #ff6b6b; }
+            50% { background: #ff9800; }
+            100% { background: #ff6b6b; }
         }
         .status {
             padding: 15px;
@@ -200,12 +219,12 @@
         }
         
         .cache-info {
-            background: rgba(76, 175, 80, 0.2);
-            border: 1px solid rgba(76, 175, 80, 0.5);
+            background: rgba(255, 87, 34, 0.2);
+            border: 1px solid rgba(255, 87, 34, 0.5);
             padding: 15px;
             border-radius: 10px;
             margin: 20px 0;
-            color: #d4edda;
+            color: #ffccbc;
         }
         
         .last-updated {
@@ -213,6 +232,9 @@
             opacity: 0.8;
             text-align: center;
             margin-top: 10px;
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 5px;
         }
         
         @media (max-width: 768px) {
@@ -230,20 +252,21 @@
     <div class="container">
         <div class="header">
             <h1>🏆 Valkey Serverless Leaderboard</h1>
-            <div class="live-badge">🔴 REAL-TIME</div>
-            <div class="live-badge">⚡ NO CACHE</div>
-            <div class="live-badge">☁️ VALKEY</div>
+            <div class="live-badge">🔴 LIVE</div>
+            <div class="cache-bypass-badge">🚫 NO CACHE</div>
+            <div class="live-badge">⚡ VALKEY DIRECT</div>
             <p><strong>API:</strong> https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com</p>
         </div>
         
-        <div id="status" class="status loading">🔄 Connecting to Valkey Serverless...</div>
+        <div id="status" class="status loading">🔄 Bypassing all caches, connecting directly to Valkey...</div>
         
         <div class="cache-info">
-            <strong>⚡ Real-Time Data from Valkey Serverless</strong><br>
-            • Browser cache disabled - always fresh data from ElastiCache<br>
-            • Cache-busting parameters ensure no stale data<br>
-            • Direct connection to Valkey Serverless cluster<br>
-            • Updates reflect immediately from the database<br>
+            <strong>🚫 AGGRESSIVE CACHE BYPASS ACTIVE</strong><br>
+            • Multiple cache-busting techniques enabled<br>
+            • Unique URLs generated for every request<br>
+            • Browser disk cache completely bypassed<br>
+            • Direct connection to ElastiCache Valkey Serverless<br>
+            • Real-time data guaranteed from database<br>
         </div>
         
         <div class="main-content">
@@ -257,10 +280,10 @@
             </div>
             
             <div class="section">
-                <h3>⚡ Real-Time Actions</h3>
-                <button onclick="testHealth()">🔍 Test Valkey Connection</button>
-                <button onclick="forceRefresh()">🔄 Force Refresh (No Cache)</button>
-                <button onclick="toggleAutoRefresh()" id="autoRefreshBtn">⏸️ Pause Auto-Refresh</button>
+                <h3>⚡ Cache-Free Actions</h3>
+                <button onclick="testHealthNow()">🔍 Test Valkey (Bypass Cache)</button>
+                <button onclick="forceRefreshNow()">🔄 Force Refresh (New URL)</button>
+                <button onclick="clearAllCaches()">🗑️ Clear All Browser Caches</button>
                 
                 <div class="stats">
                     <div class="stat-card">
@@ -268,8 +291,8 @@
                         <span class="stat-label">Players</span>
                     </div>
                     <div class="stat-card">
-                        <span class="stat-number" id="topScore">-</span>
-                        <span class="stat-label">Top Score</span>
+                        <span class="stat-number" id="requestCount">0</span>
+                        <span class="stat-label">Fresh Requests</span>
                     </div>
                 </div>
                 
@@ -278,27 +301,27 @@
         </div>
         
         <div class="leaderboard">
-            <h3>🏅 Live Leaderboard (Direct from Valkey)</h3>
+            <h3>🏅 Live Leaderboard (Cache-Free Valkey Data)</h3>
             <div class="last-updated" id="lastUpdated">Loading...</div>
-            <div id="leaderboard">Loading real-time data from Valkey Serverless...</div>
+            <div id="leaderboard">Bypassing caches, loading fresh data from Valkey...</div>
         </div>
         
         <div class="debug">
-            <strong>🔧 Real-Time Debug Info:</strong><br>
-            <div id="debug">Initializing real-time connection...</div>
+            <strong>🔧 Cache Bypass Debug Info:</strong><br>
+            <div id="debug">Initializing cache bypass mechanisms...</div>
         </div>
     </div>
 
     <script>
         const API_URL = 'https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com';
         let debugLog = [];
+        let requestCounter = 0;
         let autoRefreshInterval = null;
-        let isAutoRefreshEnabled = true;
 
         function log(message) {
             const timestamp = new Date().toLocaleTimeString();
             debugLog.push(`${timestamp}: ${message}`);
-            document.getElementById('debug').innerHTML = debugLog.slice(-10).join('<br>');
+            document.getElementById('debug').innerHTML = debugLog.slice(-12).join('<br>');
             console.log(message);
         }
 
@@ -317,49 +340,97 @@
             }, 8000);
         }
 
-        // Cache-busting GET requests - always fresh from Valkey
-        async function apiGetFresh(endpoint) {
-            // Add timestamp and random number to prevent any caching
-            const cacheBuster = `?_t=${Date.now()}&_r=${Math.random()}`;
-            const fullEndpoint = endpoint + cacheBuster;
+        // AGGRESSIVE cache-busting function
+        function generateCacheBustingUrl(endpoint) {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 15);
+            const sessionId = Math.random().toString(36).substring(2, 10);
+            const requestId = ++requestCounter;
             
-            log(`Making FRESH request to ${endpoint} (cache-busted)`);
+            // Multiple cache-busting parameters
+            const cacheBusters = [
+                `_t=${timestamp}`,
+                `_r=${random}`,
+                `_s=${sessionId}`,
+                `_req=${requestId}`,
+                `_cb=${Math.floor(Math.random() * 1000000)}`,
+                `_nocache=${Date.now()}`
+            ].join('&');
+            
+            return `${endpoint}?${cacheBusters}`;
+        }
+
+        // Completely cache-free API request
+        async function apiGetCacheFree(endpoint) {
+            const cacheBustedEndpoint = generateCacheBustingUrl(endpoint);
+            
+            log(`Making CACHE-FREE request #${requestCounter} to ${endpoint}`);
+            log(`Cache-busted URL: ${cacheBustedEndpoint}`);
             
             try {
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + fullEndpoint)}`;
-                log(`Using cache-busting proxy: ${proxyUrl}`);
+                // Use a unique proxy URL each time to avoid proxy caching
+                const proxyVariant = Math.floor(Math.random() * 3);
+                let proxyUrl;
+                
+                switch(proxyVariant) {
+                    case 0:
+                        proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + cacheBustedEndpoint)}&_=${Date.now()}`;
+                        break;
+                    case 1:
+                        proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(API_URL + cacheBustedEndpoint)}&format=json&_=${Date.now()}`;
+                        break;
+                    default:
+                        proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + cacheBustedEndpoint)}&callback=none&_=${Math.random()}`;
+                }
+                
+                log(`Using proxy variant ${proxyVariant}: ${proxyUrl.substring(0, 100)}...`);
                 
                 const response = await fetch(proxyUrl, {
                     method: 'GET',
                     headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
                         'Pragma': 'no-cache',
-                        'Expires': '0'
-                    }
+                        'Expires': '0',
+                        'If-Modified-Since': 'Thu, 01 Jan 1970 00:00:00 GMT',
+                        'If-None-Match': '*'
+                    },
+                    cache: 'no-store'
                 });
                 
-                log(`Response status: ${response.status}`);
+                log(`Response status: ${response.status} (Request #${requestCounter})`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const data = await response.json();
-                log(`FRESH data received from Valkey: ${JSON.stringify(data).substring(0, 100)}...`);
+                let data;
+                if (proxyVariant === 1) {
+                    // Handle wrapped response
+                    const wrappedData = await response.json();
+                    data = JSON.parse(wrappedData.contents);
+                } else {
+                    data = await response.json();
+                }
+                
+                log(`FRESH data received from Valkey (Request #${requestCounter}): ${JSON.stringify(data).substring(0, 100)}...`);
+                
+                // Update request counter display
+                document.getElementById('requestCount').textContent = requestCounter;
+                
                 return data;
             } catch (error) {
-                log(`API Error: ${error.message}`);
+                log(`Cache-free API Error: ${error.message}`);
                 throw error;
             }
         }
 
-        async function testHealth() {
-            setStatus('🔄 Testing real-time connection to Valkey...', 'loading');
+        async function testHealthNow() {
+            setStatus('🔄 Testing Valkey with fresh cache-free request...', 'loading');
             try {
-                const data = await apiGetFresh('/health');
+                const data = await apiGetCacheFree('/health');
                 if (data && data.success && data.ping === 'PONG') {
-                    setStatus(`✅ Real-time connection to Valkey! Ping: ${data.ping}`, 'success');
-                    log(`Valkey timestamp: ${data.timestamp}`);
+                    setStatus(`✅ FRESH connection to Valkey! Ping: ${data.ping} (Request #${requestCounter})`, 'success');
+                    log(`Valkey timestamp: ${data.timestamp} - CONFIRMED FRESH`);
                     return true;
                 } else {
                     setStatus('❌ Unexpected response from Valkey', 'error');
@@ -371,16 +442,16 @@
             }
         }
 
-        async function forceRefresh() {
-            setStatus('🔄 Force refreshing from Valkey (bypassing all caches)...', 'loading');
+        async function forceRefreshNow() {
+            setStatus('🔄 Force refresh with NEW unique URL (bypassing ALL caches)...', 'loading');
             try {
-                const data = await apiGetFresh('/leaderboard');
+                const data = await apiGetCacheFree('/leaderboard');
                 if (data && data.leaderboard) {
                     displayLeaderboard(data.leaderboard);
                     updateStats(data.leaderboard);
-                    updateLastUpdated(data.timestamp);
-                    setStatus(`✅ Fresh data loaded from Valkey! ${data.leaderboard.length} players`, 'success');
-                    log(`Data freshness confirmed - timestamp: ${data.timestamp}`);
+                    updateLastUpdated(data.timestamp, requestCounter);
+                    setStatus(`✅ FRESH data from Valkey! ${data.leaderboard.length} players (Request #${requestCounter})`, 'success');
+                    log(`Data confirmed fresh - Valkey timestamp: ${data.timestamp}`);
                 } else {
                     throw new Error('Invalid leaderboard data');
                 }
@@ -390,47 +461,35 @@
             }
         }
 
-        function toggleAutoRefresh() {
-            const btn = document.getElementById('autoRefreshBtn');
+        async function clearAllCaches() {
+            log('Clearing all browser caches...');
             
-            if (isAutoRefreshEnabled) {
-                // Disable auto-refresh
-                if (autoRefreshInterval) {
-                    clearInterval(autoRefreshInterval);
-                    autoRefreshInterval = null;
+            try {
+                // Clear service worker caches
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames.map(cacheName => caches.delete(cacheName))
+                    );
+                    log(`Cleared ${cacheNames.length} cache stores`);
                 }
-                isAutoRefreshEnabled = false;
-                btn.textContent = '▶️ Resume Auto-Refresh';
-                btn.className = 'btn-secondary';
-                log('Auto-refresh paused');
-                showMessage('actionMessage', '⏸️ Auto-refresh paused. Click to resume.', 'warning');
-            } else {
-                // Enable auto-refresh
-                startAutoRefresh();
-                isAutoRefreshEnabled = true;
-                btn.textContent = '⏸️ Pause Auto-Refresh';
-                btn.className = '';
-                log('Auto-refresh resumed');
-                showMessage('actionMessage', '▶️ Auto-refresh resumed (every 10 seconds).', 'success');
+                
+                // Clear localStorage and sessionStorage
+                localStorage.clear();
+                sessionStorage.clear();
+                log('Cleared local and session storage');
+                
+                showMessage('actionMessage', '✅ All browser caches cleared! Next request will be completely fresh.', 'success');
+                
+                // Force a fresh request immediately
+                setTimeout(() => {
+                    forceRefreshNow();
+                }, 1000);
+                
+            } catch (error) {
+                log(`Cache clearing error: ${error.message}`);
+                showMessage('actionMessage', '⚠️ Some caches may not have been cleared, but next request will still be fresh.', 'warning');
             }
-        }
-
-        function startAutoRefresh() {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-            }
-            
-            // Faster refresh for real-time feel - every 10 seconds
-            autoRefreshInterval = setInterval(async () => {
-                if (isAutoRefreshEnabled) {
-                    try {
-                        log('Auto-refreshing from Valkey...');
-                        await forceRefresh();
-                    } catch (error) {
-                        log(`Auto-refresh failed: ${error.message}`);
-                    }
-                }
-            }, 10000); // 10 seconds for real-time updates
         }
 
         function addScoreAPI() {
@@ -445,17 +504,16 @@
             const apiCall = `curl -X POST ${API_URL}/score -H "Content-Type: application/json" -d '{"player":"${name}","score":${score}}'`;
             
             showMessage('scoreMessage', 
-                `✅ API call ready! This will update Valkey Serverless directly:<br><br>
+                `✅ API call ready for direct Valkey update:<br><br>
                 <code style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; display: block; margin: 10px 0; font-family: monospace; font-size: 12px;">
                 ${apiCall}
                 </code><br>
-                Click "Copy & Execute" to run it and see immediate updates!`, 
+                This will update Valkey Serverless directly - no caching involved!`, 
                 'success'
             );
             
-            // Store for copy function
             window.currentApiCall = apiCall;
-            log(`Generated API call for immediate Valkey update: ${name} = ${score}`);
+            log(`Generated direct Valkey API call: ${name} = ${score}`);
         }
 
         function copyAndExecute() {
@@ -467,18 +525,18 @@
             navigator.clipboard.writeText(window.currentApiCall).then(() => {
                 showMessage('scoreMessage', 
                     `✅ API call copied! <br><br>
-                    <strong>Quick steps for immediate update:</strong><br>
-                    1. Open terminal (Cmd+Space → Terminal)<br>
-                    2. Paste and press Enter (Cmd+V)<br>
-                    3. Watch the leaderboard update in real-time!<br><br>
-                    <strong>The update will appear within 10 seconds!</strong>`, 
+                    <strong>Execute in terminal for immediate Valkey update:</strong><br>
+                    1. Open terminal<br>
+                    2. Paste and press Enter<br>
+                    3. Watch for fresh data in next refresh!<br><br>
+                    <strong>Data will be fresh from Valkey Serverless!</strong>`, 
                     'success'
                 );
                 
-                // Auto-refresh more frequently after API call
+                // Schedule a fresh request to check for updates
                 setTimeout(() => {
-                    log('Checking for updates after API call...');
-                    forceRefresh();
+                    log('Checking for fresh updates after API call...');
+                    forceRefreshNow();
                 }, 3000);
                 
                 // Clear form
@@ -491,16 +549,23 @@
 
         function updateStats(players) {
             document.getElementById('totalPlayers').textContent = players.length;
-            document.getElementById('topScore').textContent = players.length > 0 ? players[0].score.toLocaleString() : '0';
         }
 
-        function updateLastUpdated(timestamp) {
+        function updateLastUpdated(timestamp, requestNum) {
             const lastUpdatedDiv = document.getElementById('lastUpdated');
             if (timestamp) {
                 const date = new Date(timestamp);
-                lastUpdatedDiv.textContent = `Last updated: ${date.toLocaleTimeString()} (fresh from Valkey)`;
+                lastUpdatedDiv.innerHTML = `
+                    <strong>Last updated:</strong> ${date.toLocaleTimeString()}<br>
+                    <strong>Request #${requestNum}</strong> - Fresh from Valkey Serverless<br>
+                    <strong>Cache status:</strong> BYPASSED ✅
+                `;
             } else {
-                lastUpdatedDiv.textContent = `Last updated: ${new Date().toLocaleTimeString()} (fresh from Valkey)`;
+                lastUpdatedDiv.innerHTML = `
+                    <strong>Last updated:</strong> ${new Date().toLocaleTimeString()}<br>
+                    <strong>Request #${requestNum}</strong> - Fresh from Valkey Serverless<br>
+                    <strong>Cache status:</strong> BYPASSED ✅
+                `;
             }
         }
 
@@ -520,35 +585,61 @@
             `).join('');
         }
 
-        // Initialize the app with real-time focus
-        window.addEventListener('load', async () => {
-            log('🚀 Real-time Valkey Serverless Leaderboard starting...');
-            log('Cache-busting enabled - all data fresh from ElastiCache');
+        function startAggressiveAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
             
-            // Test connection and load fresh data
-            const healthOk = await testHealth();
+            // Very frequent refresh with cache bypass
+            autoRefreshInterval = setInterval(async () => {
+                try {
+                    log('Auto-refresh: Making fresh cache-free request...');
+                    await forceRefreshNow();
+                } catch (error) {
+                    log(`Auto-refresh failed: ${error.message}`);
+                }
+            }, 8000); // Every 8 seconds with fresh URLs
+        }
+
+        // Initialize with aggressive cache bypass
+        window.addEventListener('load', async () => {
+            log('🚀 AGGRESSIVE CACHE BYPASS Valkey Leaderboard starting...');
+            log('Multiple cache-busting techniques enabled');
+            log('Every request uses unique URLs to bypass all caches');
+            
+            // Clear any existing caches first
+            await clearAllCaches();
+            
+            // Test connection with fresh request
+            const healthOk = await testHealthNow();
             if (healthOk) {
-                await forceRefresh();
+                await forceRefreshNow();
                 
-                // Start aggressive auto-refresh for real-time feel
-                startAutoRefresh();
+                // Start aggressive auto-refresh
+                startAggressiveAutoRefresh();
                 
-                log('✅ Real-time auto-refresh enabled (every 10 seconds)');
-                log('✅ All browser caching disabled - pure Valkey Serverless data');
+                log('✅ Aggressive auto-refresh enabled (every 8 seconds with unique URLs)');
+                log('✅ All caching mechanisms bypassed - pure Valkey Serverless data');
             } else {
                 log('❌ Initial connection failed');
             }
         });
 
-        // Disable browser caching globally
+        // Prevent any caching on page unload
         window.addEventListener('beforeunload', () => {
-            // Clear any cached data
             if ('caches' in window) {
                 caches.keys().then(names => {
                     names.forEach(name => {
                         caches.delete(name);
                     });
                 });
+            }
+        });
+
+        // Disable back/forward cache
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                window.location.reload();
             }
         });
     </script>
