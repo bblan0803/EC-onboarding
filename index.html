@@ -8,8 +8,6 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta http-equiv="Last-Modified" content="0">
-    <meta http-equiv="If-Modified-Since" content="0">
     <style>
         * {
             margin: 0;
@@ -65,11 +63,6 @@
             animation: none;
         }
         
-        .cors-badge {
-            background: #ff9800;
-            animation: none;
-        }
-        
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -78,6 +71,15 @@
         
         .api-info {
             background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+        
+        .score-info {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid #ffc107;
             padding: 15px;
             border-radius: 10px;
             margin-top: 15px;
@@ -159,10 +161,6 @@
         
         .btn-secondary {
             background: linear-gradient(135deg, #ff6b6b, #ff5252);
-        }
-        
-        .btn-secondary:hover {
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
         }
         
         .connection-status {
@@ -320,6 +318,20 @@
             opacity: 0.9;
         }
         
+        .cors-notice {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #f44336;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .cors-notice h4 {
+            color: #f44336;
+            margin-bottom: 10px;
+        }
+        
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -339,15 +351,24 @@
             <h1>🏆 Valkey Serverless Leaderboard</h1>
             <div class="badge">🔴 LIVE</div>
             <div class="badge">📝 POST ENABLED</div>
-            <div class="badge github-badge">🚀 GITHUB READY</div>
-            <div class="badge cors-badge">🌐 CORS HANDLED</div>
-            <p>Real-time gaming leaderboard with comprehensive CORS handling and fallbacks</p>
+            <div class="badge github-badge">🚀 GITHUB PAGES READY</div>
+            <p>Real-time gaming leaderboard powered by AWS Lambda & Valkey Serverless</p>
             <div class="api-info">
                 <strong>API Endpoint:</strong> https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com<br>
-                <strong>CORS Handling:</strong> Multiple fallback methods implemented<br>
-                <strong>Cache Prevention:</strong> Comprehensive no-cache headers<br>
-                <strong>Deployment:</strong> Ready for GitHub Pages, Netlify, Vercel
+                <strong>CORS Handling:</strong> Multiple fallback methods for maximum compatibility<br>
+                <strong>Cache Prevention:</strong> Always fresh data from Valkey Serverless<br>
+                <strong>Deployment:</strong> Optimized for GitHub Pages, Netlify, Vercel
             </div>
+            <div class="score-info">
+                <strong>💡 Score Guidelines:</strong> Current leaderboard has high test scores. 
+                Try scores like 1000000+ to appear in top rankings, or any score to test functionality!
+            </div>
+        </div>
+
+        <div class="cors-notice" id="corsNotice">
+            <h4>🌐 CORS Notice</h4>
+            <p>This page works best when hosted on a web server (GitHub Pages, Netlify, etc.). 
+            If you're seeing connection errors, upload this file to GitHub Pages for full functionality!</p>
         </div>
         
         <div class="main-content">
@@ -365,7 +386,7 @@
                     </div>
                     <div class="form-group">
                         <label for="playerScore">Score</label>
-                        <input type="number" id="playerScore" placeholder="Enter your score" required min="0">
+                        <input type="number" id="playerScore" placeholder="Enter your score" required min="1" value="1500000">
                     </div>
                     <button type="submit" class="btn" id="submitBtn">🚀 Submit to Valkey</button>
                 </form>
@@ -376,7 +397,7 @@
                 <h3>⚡ Real-Time Actions</h3>
                 <button class="btn" onclick="testConnection()">🔍 Test Connection</button>
                 <button class="btn" onclick="refreshLeaderboard()">🔄 Refresh Leaderboard</button>
-                <button class="btn btn-secondary" onclick="clearAllCache()">🗑️ Clear All Cache</button>
+                <button class="btn btn-secondary" onclick="clearAllCache()">🗑️ Clear Cache</button>
                 <div id="actionMessage"></div>
                 
                 <div class="stats">
@@ -407,17 +428,8 @@
     <script>
         // Configuration
         const API_BASE_URL = 'https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com';
-        const CORS_PROXIES = [
-            'https://api.allorigins.win/raw?url=',
-            'https://cors-anywhere.herokuapp.com/',
-            'https://corsproxy.io/?',
-            'https://cors.sh/'
-        ];
-        
         let connectionStatus = 'connecting';
-        let currentProxyIndex = 0;
-        let retryCount = 0;
-        const MAX_RETRIES = 3;
+        let isLocalFile = window.location.protocol === 'file:';
 
         // Utility Functions
         function updateConnectionStatus(status, message) {
@@ -451,7 +463,7 @@
             document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
         }
 
-        // Comprehensive API call with multiple fallback methods
+        // Enhanced API call with comprehensive fallback methods
         async function apiCall(endpoint, method = 'GET', body = null) {
             const timestamp = Date.now();
             const random = Math.random().toString(36).substring(7);
@@ -459,7 +471,7 @@
             
             // Method 1: Direct API call (works on HTTPS hosted sites)
             try {
-                console.log(`Attempting direct API call: ${method} ${endpoint}`);
+                console.log(`🚀 Attempting direct API call: ${method} ${endpoint}`);
                 
                 const options = {
                     method: method,
@@ -472,8 +484,7 @@
                         'Pragma': 'no-cache',
                         'Expires': '0',
                         'If-Modified-Since': 'Thu, 01 Jan 1970 00:00:00 GMT',
-                        'If-None-Match': '*',
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'If-None-Match': '*'
                     }
                 };
 
@@ -489,7 +500,10 @@
 
                 const data = await response.json();
                 console.log('✅ Direct API call successful');
-                retryCount = 0;
+                
+                // Hide CORS notice if direct call works
+                document.getElementById('corsNotice').style.display = 'none';
+                
                 return data;
                 
             } catch (directError) {
@@ -507,10 +521,16 @@
 
         // Method 2: Proxied requests for GET
         async function tryProxiedRequest(endpoint) {
-            for (let i = 0; i < CORS_PROXIES.length; i++) {
+            const proxies = [
+                'https://api.allorigins.win/raw?url=',
+                'https://cors-anywhere.herokuapp.com/',
+                'https://corsproxy.io/?'
+            ];
+            
+            for (let i = 0; i < proxies.length; i++) {
                 try {
-                    const proxyUrl = CORS_PROXIES[i] + encodeURIComponent(API_BASE_URL + endpoint);
-                    console.log(`Trying proxy ${i + 1}/${CORS_PROXIES.length}: ${CORS_PROXIES[i]}`);
+                    const proxyUrl = proxies[i] + encodeURIComponent(API_BASE_URL + endpoint);
+                    console.log(`Trying proxy ${i + 1}/${proxies.length}`);
                     
                     const response = await fetch(proxyUrl, {
                         method: 'GET',
@@ -527,7 +547,6 @@
                     
                     const data = await response.json();
                     console.log(`✅ Proxy ${i + 1} successful`);
-                    currentProxyIndex = i;
                     return data;
                     
                 } catch (proxyError) {
@@ -536,7 +555,7 @@
                 }
             }
             
-            throw new Error('All proxy methods failed');
+            throw new Error('All methods failed - please host on a web server');
         }
 
         // Method 3: Form submission for POST requests
@@ -554,7 +573,6 @@
                 form.action = API_BASE_URL + endpoint;
                 form.target = iframe.name;
                 form.style.display = 'none';
-                form.enctype = 'application/json';
                 
                 // Add body data as form fields
                 if (body) {
@@ -676,7 +694,7 @@
             const playerScore = parseInt(document.getElementById('playerScore').value);
             const submitBtn = document.getElementById('submitBtn');
             
-            if (!playerName || isNaN(playerScore) || playerScore < 0) {
+            if (!playerName || isNaN(playerScore) || playerScore < 1) {
                 showMessage('scoreMessage', '❌ Please enter valid player name and score', 'error');
                 return;
             }
@@ -701,9 +719,12 @@
                     
                     // Clear form
                     document.getElementById('scoreForm').reset();
+                    document.getElementById('playerScore').value = '1500000'; // Reset to suggested value
                     
                     // Refresh leaderboard
-                    await refreshLeaderboard();
+                    setTimeout(async () => {
+                        await refreshLeaderboard();
+                    }, 1000);
                 } else {
                     showMessage('scoreMessage', `❌ ${data.error || 'Submission failed'}`, 'error');
                 }
@@ -718,29 +739,28 @@
 
         // Cache clearing function
         function clearAllCache() {
-            // Clear browser caches
             if ('caches' in window) {
                 caches.keys().then(names => {
                     names.forEach(name => caches.delete(name));
                 });
             }
             
-            // Clear storage
             localStorage.clear();
             sessionStorage.clear();
             
-            // Force reload without cache
-            location.reload(true);
+            showMessage('actionMessage', '✅ All caches cleared! Next requests will be completely fresh.', 'success');
         }
 
         // Auto-refresh functionality
         function startAutoRefresh() {
             setInterval(async () => {
-                try {
-                    await refreshLeaderboard();
-                    console.log('🔄 Auto-refresh completed');
-                } catch (error) {
-                    console.log(`⚠️ Auto-refresh failed: ${error.message}`);
+                if (connectionStatus === 'connected') {
+                    try {
+                        await refreshLeaderboard();
+                        console.log('🔄 Auto-refresh completed');
+                    } catch (error) {
+                        console.log(`⚠️ Auto-refresh failed: ${error.message}`);
+                    }
                 }
             }, 30000); // Refresh every 30 seconds
         }
@@ -748,8 +768,14 @@
         // Initialize application
         window.addEventListener('load', async () => {
             console.log('🚀 Valkey Serverless Leaderboard initializing...');
-            console.log('🌐 CORS handling: Multiple fallback methods enabled');
-            console.log('🚫 Cache prevention: Comprehensive headers applied');
+            
+            if (isLocalFile) {
+                console.log('⚠️ Running from local file - some features may be limited');
+                document.getElementById('corsNotice').style.display = 'block';
+            } else {
+                console.log('✅ Running from web server - full functionality available');
+                document.getElementById('corsNotice').style.display = 'none';
+            }
             
             try {
                 // Test connection first
@@ -779,7 +805,7 @@
 ✅ Features:
    • Comprehensive CORS handling with multiple fallbacks
    • Direct API calls (works on HTTPS)
-   • CORS proxy fallbacks for GET requests
+   • CORS proxy fallbacks for GET requests  
    • Form submission fallback for POST requests
    • Complete cache prevention
    • Real-time auto-refresh every 30 seconds
@@ -787,17 +813,16 @@
 
 🔧 API Configuration:
    • Endpoint: ${API_BASE_URL}
-   • CORS Proxies: ${CORS_PROXIES.length} configured
    • Cache Prevention: Comprehensive headers
-   • Retry Logic: ${MAX_RETRIES} attempts per request
+   • Multiple fallback methods for maximum compatibility
 
-🚀 Deployment Ready:
-   • GitHub Pages
-   • Netlify
-   • Vercel
-   • Any static hosting service
+🚀 Deployment Instructions:
+   1. Upload this index.html to your GitHub repository
+   2. Enable GitHub Pages in repository settings
+   3. Access via https://username.github.io/repo-name
+   4. Full functionality will work from HTTPS!
 
-💡 This version will work perfectly when hosted on any HTTPS domain!
+💡 Current Status: ${isLocalFile ? 'Local file (limited)' : 'Web server (full functionality)'}
         `);
     </script>
 </body>
