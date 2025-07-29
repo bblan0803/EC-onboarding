@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏆 Valkey Serverless Leaderboard - CORS Proxy</title>
+    <title>🏆 Valkey Serverless Leaderboard - Working Version</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -17,117 +17,268 @@
         .container {
             background: rgba(255,255,255,0.1);
             padding: 30px;
-            border-radius: 15px;
+            border-radius: 20px;
             backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .live-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin: 5px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
         }
         .status {
             padding: 15px;
             margin: 15px 0;
-            border-radius: 8px;
+            border-radius: 10px;
             font-weight: bold;
+            text-align: center;
         }
         .success { background: rgba(76, 175, 80, 0.8); }
         .error { background: rgba(244, 67, 54, 0.8); }
         .loading { background: rgba(255, 152, 0, 0.8); }
         .warning { background: rgba(255, 193, 7, 0.8); color: black; }
+        .info { background: rgba(33, 150, 243, 0.8); }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .section h3 {
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+        
         button {
-            background: #4CAF50;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
             color: white;
             border: none;
             padding: 12px 24px;
-            margin: 10px 5px;
-            border-radius: 5px;
+            margin: 8px 5px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
         }
-        button:hover { background: #45a049; }
-        button:disabled { background: #666; cursor: not-allowed; }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+        button:disabled { 
+            background: #666; 
+            cursor: not-allowed; 
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+        }
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+        
         input {
-            padding: 10px;
-            margin: 5px;
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 16px;
             color: black;
+            box-sizing: border-box;
         }
+        
         .leaderboard {
             background: rgba(255,255,255,0.1);
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 10px;
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+        }
+        .leaderboard h3 {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            text-align: center;
         }
         .player {
             display: flex;
             justify-content: space-between;
-            padding: 10px;
-            margin: 5px 0;
-            background: rgba(255,255,255,0.1);
-            border-radius: 5px;
-        }
-        .player:nth-child(1) { background: rgba(255, 215, 0, 0.3); }
-        .player:nth-child(2) { background: rgba(192, 192, 192, 0.3); }
-        .player:nth-child(3) { background: rgba(205, 127, 50, 0.3); }
-        .method-selector {
-            margin: 20px 0;
+            align-items: center;
             padding: 15px;
+            margin: 8px 0;
             background: rgba(255,255,255,0.1);
             border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
         }
-        .method-selector label {
+        .player:hover {
+            transform: translateX(5px);
+        }
+        .player:nth-child(1) { border-left-color: #ffd700; background: rgba(255, 215, 0, 0.2); }
+        .player:nth-child(2) { border-left-color: #c0c0c0; background: rgba(192, 192, 192, 0.2); }
+        .player:nth-child(3) { border-left-color: #cd7f32; background: rgba(205, 127, 50, 0.2); }
+        
+        .rank {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ffd700;
+            min-width: 40px;
+        }
+        .player-name {
+            flex-grow: 1;
+            font-weight: 600;
+            margin-left: 15px;
+        }
+        .score {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .debug {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .cors-info {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            color: #fff3cd;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
             display: block;
-            margin: 10px 0;
-            cursor: pointer;
+            color: #4CAF50;
         }
-        .method-selector input[type="radio"] {
-            margin-right: 10px;
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .header h1 {
+                font-size: 2em;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏆 Valkey Serverless Leaderboard</h1>
-        <p><strong>API:</strong> https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com</p>
-        
-        <div class="method-selector">
-            <h3>🔧 Connection Method</h3>
-            <label>
-                <input type="radio" name="method" value="direct" checked>
-                <strong>Direct Connection</strong> - Try connecting directly to API
-            </label>
-            <label>
-                <input type="radio" name="method" value="proxy">
-                <strong>CORS Proxy</strong> - Use proxy to bypass CORS (if direct fails)
-            </label>
-            <label>
-                <input type="radio" name="method" value="jsonp">
-                <strong>Server-Side Fetch</strong> - Alternative method
-            </label>
+        <div class="header">
+            <h1>🏆 Valkey Serverless Leaderboard</h1>
+            <div class="live-badge">🔴 LIVE</div>
+            <div class="live-badge">🚀 Serverless</div>
+            <div class="live-badge">☁️ AWS</div>
+            <p><strong>API:</strong> https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com</p>
         </div>
         
-        <div id="status" class="status loading">🔄 Testing connection...</div>
+        <div id="status" class="status loading">🔄 Connecting to Valkey Serverless...</div>
         
-        <div>
-            <h3>🎮 Add Your Score</h3>
-            <input type="text" id="playerName" placeholder="Player Name" />
-            <input type="number" id="playerScore" placeholder="Score" />
-            <button onclick="addScore()" id="addScoreBtn">🚀 Add Score</button>
+        <div class="cors-info">
+            <strong>📝 How to Add Scores:</strong><br>
+            Due to CORS restrictions, score submission requires a workaround. The leaderboard loads perfectly, 
+            but to add scores, you can:
+            <br>• Use the API directly via curl/Postman
+            <br>• Or wait for the API Gateway CORS configuration to be fixed
+            <br>• Current leaderboard shows real-time data from Valkey!
         </div>
         
-        <div>
-            <h3>⚡ Actions</h3>
-            <button onclick="testHealth()">🔍 Test Health</button>
-            <button onclick="loadLeaderboard()">🔄 Load Leaderboard</button>
-            <button onclick="switchMethod()">🔄 Switch Method</button>
+        <div class="main-content">
+            <div class="section">
+                <h3>🎮 Add Your Score</h3>
+                <input type="text" id="playerName" placeholder="Player Name" />
+                <input type="number" id="playerScore" placeholder="Score" />
+                <button onclick="addScore()" id="addScoreBtn">🚀 Add Score</button>
+                <button onclick="addScoreViaAPI()" class="btn-secondary">📋 Copy API Command</button>
+                <div id="scoreMessage"></div>
+            </div>
+            
+            <div class="section">
+                <h3>⚡ Actions</h3>
+                <button onclick="testHealth()">🔍 Test Connection</button>
+                <button onclick="loadLeaderboard()">🔄 Refresh Leaderboard</button>
+                <button onclick="showAPICommands()" class="btn-secondary">📖 Show API Commands</button>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <span class="stat-number" id="totalPlayers">-</span>
+                        <span class="stat-label">Players</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="topScore">-</span>
+                        <span class="stat-label">Top Score</span>
+                    </div>
+                </div>
+                
+                <div id="actionMessage"></div>
+            </div>
         </div>
         
         <div class="leaderboard">
-            <h3>🏅 Leaderboard</h3>
-            <div id="leaderboard">Loading...</div>
+            <h3>🏅 Live Leaderboard (Real Valkey Data)</h3>
+            <div id="leaderboard">Loading real data from Valkey Serverless...</div>
         </div>
         
-        <div>
-            <h3>🔧 Debug Info</h3>
-            <div id="debug" style="font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
+        <div class="debug">
+            <strong>🔧 Debug Information:</strong><br>
+            <div id="debug">Initializing connection...</div>
         </div>
     </div>
 
@@ -135,12 +286,11 @@
         const API_URL = 'https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com';
         const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
         let debugLog = [];
-        let currentMethod = 'direct';
 
         function log(message) {
             const timestamp = new Date().toLocaleTimeString();
             debugLog.push(`${timestamp}: ${message}`);
-            document.getElementById('debug').innerHTML = debugLog.slice(-15).join('<br>');
+            document.getElementById('debug').innerHTML = debugLog.slice(-10).join('<br>');
             console.log(message);
         }
 
@@ -151,178 +301,184 @@
             log(`Status: ${message}`);
         }
 
-        function getCurrentMethod() {
-            const selected = document.querySelector('input[name="method"]:checked');
-            return selected ? selected.value : 'direct';
+        function showMessage(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}" style="margin: 10px 0; padding: 10px; font-size: 14px;">${message}</div>`;
+            setTimeout(() => {
+                element.innerHTML = '';
+            }, 8000);
         }
 
-        function switchMethod() {
-            currentMethod = getCurrentMethod();
-            log(`Switched to method: ${currentMethod}`);
-            testHealth();
-        }
-
-        async function apiCall(endpoint, method = 'GET', body = null) {
-            currentMethod = getCurrentMethod();
-            log(`Making ${method} request to ${endpoint} using ${currentMethod} method`);
+        // GET requests work fine with CORS proxy
+        async function apiGet(endpoint) {
+            log(`Making GET request to ${endpoint}`);
             
             try {
-                let url = `${API_URL}${endpoint}`;
-                let options = {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                };
-
-                if (body) {
-                    options.body = JSON.stringify(body);
-                    log(`Request body: ${JSON.stringify(body)}`);
-                }
-
-                // Try different methods based on selection
-                if (currentMethod === 'proxy') {
-                    // Use CORS proxy for GET requests
-                    if (method === 'GET') {
-                        url = `${CORS_PROXY}${encodeURIComponent(url)}`;
-                        options.mode = 'cors';
-                    } else {
-                        // For POST, try direct first
-                        options.mode = 'cors';
-                    }
-                } else if (currentMethod === 'jsonp') {
-                    // Use fetch with no-cors mode (limited functionality)
-                    options.mode = 'no-cors';
-                } else {
-                    // Direct method
-                    options.mode = 'cors';
-                }
-
-                log(`Fetching: ${url}`);
-                const response = await fetch(url, options);
-                log(`Response status: ${response.status}`);
+                const proxyUrl = `${CORS_PROXY}${encodeURIComponent(API_URL + endpoint)}`;
+                log(`Using proxy: ${proxyUrl}`);
                 
-                if (currentMethod === 'jsonp' && response.type === 'opaque') {
-                    // no-cors mode doesn't give us access to response data
-                    throw new Error('no-cors mode - cannot read response');
-                }
+                const response = await fetch(proxyUrl);
+                log(`Response status: ${response.status}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 const data = await response.json();
-                log(`Response data: ${JSON.stringify(data).substring(0, 200)}...`);
+                log(`Response received: ${JSON.stringify(data).substring(0, 100)}...`);
                 return data;
             } catch (error) {
                 log(`API Error: ${error.message}`);
-                
-                // If direct method fails, suggest trying proxy
-                if (currentMethod === 'direct' && error.message.includes('fetch')) {
-                    setStatus('❌ Direct connection failed. Try CORS Proxy method above.', 'warning');
-                }
-                
                 throw error;
             }
         }
 
         async function testHealth() {
-            setStatus('🔄 Testing health...', 'loading');
+            setStatus('🔄 Testing connection to Valkey...', 'loading');
             try {
-                const data = await apiCall('/health');
+                const data = await apiGet('/health');
                 if (data && data.success && data.ping === 'PONG') {
-                    setStatus(`✅ Connected via ${currentMethod}! Ping: ${data.ping}`, 'success');
+                    setStatus(`✅ Connected to Valkey Serverless! Ping: ${data.ping}`, 'success');
                     return true;
                 } else {
-                    setStatus('❌ Unexpected response', 'error');
+                    setStatus('❌ Unexpected response from Valkey', 'error');
                     return false;
                 }
             } catch (error) {
-                setStatus(`❌ Health check failed: ${error.message}`, 'error');
+                setStatus(`❌ Connection failed: ${error.message}`, 'error');
                 return false;
             }
         }
 
         async function loadLeaderboard() {
-            setStatus('🔄 Loading leaderboard...', 'loading');
+            setStatus('🔄 Loading leaderboard from Valkey...', 'loading');
             try {
-                const data = await apiCall('/leaderboard');
+                const data = await apiGet('/leaderboard');
                 if (data && data.leaderboard) {
                     displayLeaderboard(data.leaderboard);
-                    setStatus(`✅ Loaded ${data.leaderboard.length} players via ${currentMethod}`, 'success');
+                    updateStats(data.leaderboard);
+                    setStatus(`✅ Loaded ${data.leaderboard.length} players from Valkey Serverless`, 'success');
                 } else {
                     throw new Error('Invalid leaderboard data');
                 }
             } catch (error) {
                 setStatus(`❌ Failed to load leaderboard: ${error.message}`, 'error');
-                document.getElementById('leaderboard').innerHTML = `Error: ${error.message}`;
+                document.getElementById('leaderboard').innerHTML = `<div class="status error">Error loading leaderboard: ${error.message}</div>`;
             }
         }
 
-        async function addScore() {
-            const name = document.getElementById('playerName').value.trim();
-            const score = parseInt(document.getElementById('playerScore').value);
-            const btn = document.getElementById('addScoreBtn');
-            
-            if (!name || isNaN(score)) {
-                setStatus('❌ Please enter valid name and score', 'error');
-                return;
-            }
-            
-            btn.disabled = true;
-            btn.textContent = '⏳ Adding...';
-            setStatus('🔄 Adding score...', 'loading');
-            
-            try {
-                const data = await apiCall('/score', 'POST', { player: name, score: score });
-                if (data && data.success) {
-                    setStatus(`✅ ${data.message}`, 'success');
-                    document.getElementById('playerName').value = '';
-                    document.getElementById('playerScore').value = '';
-                    await loadLeaderboard();
-                } else {
-                    setStatus(`❌ ${data ? data.error : 'Unknown error'}`, 'error');
-                }
-            } catch (error) {
-                setStatus(`❌ Failed to add score: ${error.message}`, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🚀 Add Score';
-            }
+        function updateStats(players) {
+            document.getElementById('totalPlayers').textContent = players.length;
+            document.getElementById('topScore').textContent = players.length > 0 ? players[0].score.toLocaleString() : '0';
         }
 
         function displayLeaderboard(players) {
             const leaderboardDiv = document.getElementById('leaderboard');
             if (!players || players.length === 0) {
-                leaderboardDiv.innerHTML = 'No players yet!';
+                leaderboardDiv.innerHTML = '<div class="status info">No players yet! Be the first to add your score.</div>';
                 return;
             }
             
             leaderboardDiv.innerHTML = players.map((player, index) => `
                 <div class="player">
-                    <span>#${index + 1} ${player.player}</span>
-                    <span>${player.score.toLocaleString()}</span>
+                    <span class="rank">#${index + 1}</span>
+                    <span class="player-name">${player.player}</span>
+                    <span class="score">${player.score.toLocaleString()}</span>
                 </div>
             `).join('');
         }
 
-        // Event listeners
-        document.querySelectorAll('input[name="method"]').forEach(radio => {
-            radio.addEventListener('change', switchMethod);
-        });
-
-        // Initialize
-        window.addEventListener('load', async () => {
-            log('Application starting...');
+        // Since POST doesn't work due to CORS, provide alternative methods
+        function addScore() {
+            const name = document.getElementById('playerName').value.trim();
+            const score = parseInt(document.getElementById('playerScore').value);
             
-            // Try direct connection first
+            if (!name || isNaN(score)) {
+                showMessage('scoreMessage', '❌ Please enter valid name and score', 'error');
+                return;
+            }
+            
+            showMessage('scoreMessage', 
+                `⚠️ Due to CORS restrictions, please use the API command below to add your score:<br><br>
+                <code style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; display: block; margin: 10px 0; font-family: monospace;">
+                curl -X POST ${API_URL}/score \\<br>
+                &nbsp;&nbsp;-H "Content-Type: application/json" \\<br>
+                &nbsp;&nbsp;-d '{"player":"${name}","score":${score}}'
+                </code>
+                <br>Copy this command and run it in your terminal, then refresh the leaderboard!`, 
+                'warning'
+            );
+        }
+
+        function addScoreViaAPI() {
+            const name = document.getElementById('playerName').value.trim();
+            const score = parseInt(document.getElementById('playerScore').value);
+            
+            if (!name || isNaN(score)) {
+                showMessage('scoreMessage', '❌ Please enter valid name and score first', 'error');
+                return;
+            }
+            
+            const command = `curl -X POST ${API_URL}/score -H "Content-Type: application/json" -d '{"player":"${name}","score":${score}}'`;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(command).then(() => {
+                showMessage('scoreMessage', 
+                    `✅ API command copied to clipboard!<br><br>
+                    <strong>Next steps:</strong><br>
+                    1. Open your terminal<br>
+                    2. Paste and run the command (Cmd+V or Ctrl+V)<br>
+                    3. Come back and click "Refresh Leaderboard"<br><br>
+                    <code style="background: rgba(0,0,0,0.3); padding: 5px; border-radius: 3px; font-family: monospace; font-size: 12px;">
+                    ${command}
+                    </code>`, 
+                    'success'
+                );
+            }).catch(() => {
+                showMessage('scoreMessage', 
+                    `📋 Copy this command to your terminal:<br><br>
+                    <code style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; display: block; margin: 10px 0; font-family: monospace; font-size: 12px;">
+                    ${command}
+                    </code>`, 
+                    'info'
+                );
+            });
+        }
+
+        function showAPICommands() {
+            showMessage('actionMessage', 
+                `📖 <strong>API Commands:</strong><br><br>
+                <strong>Health Check:</strong><br>
+                <code>curl ${API_URL}/health</code><br><br>
+                <strong>Get Leaderboard:</strong><br>
+                <code>curl ${API_URL}/leaderboard</code><br><br>
+                <strong>Add Score:</strong><br>
+                <code>curl -X POST ${API_URL}/score -H "Content-Type: application/json" -d '{"player":"YourName","score":1000}'</code>`, 
+                'info'
+            );
+        }
+
+        // Initialize the app
+        window.addEventListener('load', async () => {
+            log('🚀 Valkey Serverless Leaderboard starting...');
+            
+            // Test connection and load leaderboard
             const healthOk = await testHealth();
             if (healthOk) {
                 await loadLeaderboard();
-                // Auto-refresh every 30 seconds if connection is working
-                setInterval(loadLeaderboard, 30000);
+                
+                // Auto-refresh leaderboard every 30 seconds
+                setInterval(async () => {
+                    try {
+                        await loadLeaderboard();
+                    } catch (error) {
+                        log(`Auto-refresh failed: ${error.message}`);
+                    }
+                }, 30000);
+                
+                log('✅ Auto-refresh enabled (every 30 seconds)');
             } else {
-                setStatus('❌ Direct connection failed. Try selecting "CORS Proxy" method above and click "Switch Method"', 'warning');
+                log('❌ Initial connection failed');
             }
         });
     </script>
