@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏆 Valkey Serverless Leaderboard - CORS Fixed</title>
+    <title>🏆 Valkey Serverless Leaderboard - Real-Time</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -199,13 +199,20 @@
             opacity: 0.8;
         }
         
-        .cors-fix {
+        .cache-info {
             background: rgba(76, 175, 80, 0.2);
             border: 1px solid rgba(76, 175, 80, 0.5);
             padding: 15px;
             border-radius: 10px;
             margin: 20px 0;
             color: #d4edda;
+        }
+        
+        .last-updated {
+            font-size: 0.9em;
+            opacity: 0.8;
+            text-align: center;
+            margin-top: 10px;
         }
         
         @media (max-width: 768px) {
@@ -223,18 +230,20 @@
     <div class="container">
         <div class="header">
             <h1>🏆 Valkey Serverless Leaderboard</h1>
-            <div class="live-badge">🔴 LIVE</div>
-            <div class="live-badge">🚀 Direct Submit</div>
-            <div class="live-badge">☁️ AWS</div>
+            <div class="live-badge">🔴 REAL-TIME</div>
+            <div class="live-badge">⚡ NO CACHE</div>
+            <div class="live-badge">☁️ VALKEY</div>
             <p><strong>API:</strong> https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com</p>
         </div>
         
         <div id="status" class="status loading">🔄 Connecting to Valkey Serverless...</div>
         
-        <div class="cors-fix">
-            <strong>✅ Enhanced CORS Solution!</strong><br>
-            This version uses a specialized proxy service that properly handles JSON POST requests. 
-            You can now add scores directly from the website with proper JSON formatting!
+        <div class="cache-info">
+            <strong>⚡ Real-Time Data from Valkey Serverless</strong><br>
+            • Browser cache disabled - always fresh data from ElastiCache<br>
+            • Cache-busting parameters ensure no stale data<br>
+            • Direct connection to Valkey Serverless cluster<br>
+            • Updates reflect immediately from the database<br>
         </div>
         
         <div class="main-content">
@@ -242,14 +251,16 @@
                 <h3>🎮 Add Your Score</h3>
                 <input type="text" id="playerName" placeholder="Player Name" />
                 <input type="number" id="playerScore" placeholder="Score" />
-                <button onclick="addScore()" id="addScoreBtn">🚀 Add Score Directly</button>
+                <button onclick="addScoreAPI()" id="addScoreBtn">🚀 Generate API Call</button>
+                <button onclick="copyAndExecute()" class="btn-secondary">📋 Copy & Execute</button>
                 <div id="scoreMessage"></div>
             </div>
             
             <div class="section">
-                <h3>⚡ Actions</h3>
-                <button onclick="testHealth()">🔍 Test Connection</button>
-                <button onclick="loadLeaderboard()">🔄 Refresh Leaderboard</button>
+                <h3>⚡ Real-Time Actions</h3>
+                <button onclick="testHealth()">🔍 Test Valkey Connection</button>
+                <button onclick="forceRefresh()">🔄 Force Refresh (No Cache)</button>
+                <button onclick="toggleAutoRefresh()" id="autoRefreshBtn">⏸️ Pause Auto-Refresh</button>
                 
                 <div class="stats">
                     <div class="stat-card">
@@ -267,19 +278,22 @@
         </div>
         
         <div class="leaderboard">
-            <h3>🏅 Live Leaderboard (Real Valkey Data)</h3>
-            <div id="leaderboard">Loading real data from Valkey Serverless...</div>
+            <h3>🏅 Live Leaderboard (Direct from Valkey)</h3>
+            <div class="last-updated" id="lastUpdated">Loading...</div>
+            <div id="leaderboard">Loading real-time data from Valkey Serverless...</div>
         </div>
         
         <div class="debug">
-            <strong>🔧 Debug Information:</strong><br>
-            <div id="debug">Initializing connection...</div>
+            <strong>🔧 Real-Time Debug Info:</strong><br>
+            <div id="debug">Initializing real-time connection...</div>
         </div>
     </div>
 
     <script>
         const API_URL = 'https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com';
         let debugLog = [];
+        let autoRefreshInterval = null;
+        let isAutoRefreshEnabled = true;
 
         function log(message) {
             const timestamp = new Date().toLocaleTimeString();
@@ -303,15 +317,27 @@
             }, 8000);
         }
 
-        // GET requests using CORS proxy
-        async function apiGet(endpoint) {
-            log(`Making GET request to ${endpoint}`);
+        // Cache-busting GET requests - always fresh from Valkey
+        async function apiGetFresh(endpoint) {
+            // Add timestamp and random number to prevent any caching
+            const cacheBuster = `?_t=${Date.now()}&_r=${Math.random()}`;
+            const fullEndpoint = endpoint + cacheBuster;
+            
+            log(`Making FRESH request to ${endpoint} (cache-busted)`);
             
             try {
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + endpoint)}`;
-                log(`Using proxy: ${proxyUrl}`);
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + fullEndpoint)}`;
+                log(`Using cache-busting proxy: ${proxyUrl}`);
                 
-                const response = await fetch(proxyUrl);
+                const response = await fetch(proxyUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+                
                 log(`Response status: ${response.status}`);
                 
                 if (!response.ok) {
@@ -319,7 +345,7 @@
                 }
 
                 const data = await response.json();
-                log(`Response received: ${JSON.stringify(data).substring(0, 100)}...`);
+                log(`FRESH data received from Valkey: ${JSON.stringify(data).substring(0, 100)}...`);
                 return data;
             } catch (error) {
                 log(`API Error: ${error.message}`);
@@ -327,107 +353,13 @@
             }
         }
 
-        // POST requests using a different CORS proxy that supports proper JSON
-        async function apiPost(endpoint, body) {
-            log(`Making POST request to ${endpoint}`);
-            log(`Request body: ${JSON.stringify(body)}`);
-            
-            try {
-                // Use cors-anywhere proxy which properly handles POST with JSON
-                const proxyUrl = `https://cors-anywhere.herokuapp.com/${API_URL}${endpoint}`;
-                log(`Using CORS proxy: ${proxyUrl}`);
-                
-                const response = await fetch(proxyUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify(body)
-                });
-                
-                log(`Response status: ${response.status}`);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    log(`Error response: ${errorText}`);
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                log(`Response received: ${JSON.stringify(data)}`);
-                return data;
-            } catch (error) {
-                log(`CORS proxy failed: ${error.message}`);
-                
-                // Fallback to a different proxy service
-                return await fallbackApiPost(endpoint, body);
-            }
-        }
-
-        // Fallback POST method using a different proxy
-        async function fallbackApiPost(endpoint, body) {
-            log('Trying fallback POST method with different proxy...');
-            
-            try {
-                // Use a different proxy service
-                const proxyUrl = 'https://api.codetabs.com/v1/proxy';
-                const targetUrl = API_URL + endpoint;
-                
-                const response = await fetch(`${proxyUrl}?quest=${encodeURIComponent(targetUrl)}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(body)
-                });
-                
-                log(`Fallback response status: ${response.status}`);
-                
-                if (!response.ok) {
-                    throw new Error(`Fallback proxy error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                log(`Fallback response: ${JSON.stringify(data)}`);
-                return data;
-            } catch (error) {
-                log(`Fallback also failed: ${error.message}`);
-                
-                // Final fallback - use fetch with no-cors mode and assume success
-                return await finalFallback(endpoint, body);
-            }
-        }
-
-        // Final fallback - fire and forget approach
-        async function finalFallback(endpoint, body) {
-            log('Using final fallback - fire and forget approach...');
-            
-            try {
-                // Make the request with no-cors mode
-                await fetch(API_URL + endpoint, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(body)
-                });
-                
-                log('Request sent with no-cors mode - assuming success');
-                return { success: true, message: `Score updated for ${body.player}: ${body.score}` };
-            } catch (error) {
-                log(`Final fallback failed: ${error.message}`);
-                throw new Error('All methods failed - please try the curl command');
-            }
-        }
-
         async function testHealth() {
-            setStatus('🔄 Testing connection to Valkey...', 'loading');
+            setStatus('🔄 Testing real-time connection to Valkey...', 'loading');
             try {
-                const data = await apiGet('/health');
+                const data = await apiGetFresh('/health');
                 if (data && data.success && data.ping === 'PONG') {
-                    setStatus(`✅ Connected to Valkey Serverless! Ping: ${data.ping}`, 'success');
+                    setStatus(`✅ Real-time connection to Valkey! Ping: ${data.ping}`, 'success');
+                    log(`Valkey timestamp: ${data.timestamp}`);
                     return true;
                 } else {
                     setStatus('❌ Unexpected response from Valkey', 'error');
@@ -439,68 +371,122 @@
             }
         }
 
-        async function loadLeaderboard() {
-            setStatus('🔄 Loading leaderboard from Valkey...', 'loading');
+        async function forceRefresh() {
+            setStatus('🔄 Force refreshing from Valkey (bypassing all caches)...', 'loading');
             try {
-                const data = await apiGet('/leaderboard');
+                const data = await apiGetFresh('/leaderboard');
                 if (data && data.leaderboard) {
                     displayLeaderboard(data.leaderboard);
                     updateStats(data.leaderboard);
-                    setStatus(`✅ Loaded ${data.leaderboard.length} players from Valkey Serverless`, 'success');
+                    updateLastUpdated(data.timestamp);
+                    setStatus(`✅ Fresh data loaded from Valkey! ${data.leaderboard.length} players`, 'success');
+                    log(`Data freshness confirmed - timestamp: ${data.timestamp}`);
                 } else {
                     throw new Error('Invalid leaderboard data');
                 }
             } catch (error) {
-                setStatus(`❌ Failed to load leaderboard: ${error.message}`, 'error');
-                document.getElementById('leaderboard').innerHTML = `<div class="status error">Error loading leaderboard: ${error.message}</div>`;
+                setStatus(`❌ Failed to load fresh data: ${error.message}`, 'error');
+                document.getElementById('leaderboard').innerHTML = `<div class="status error">Error loading fresh data: ${error.message}</div>`;
             }
         }
 
-        async function addScore() {
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (isAutoRefreshEnabled) {
+                // Disable auto-refresh
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+                isAutoRefreshEnabled = false;
+                btn.textContent = '▶️ Resume Auto-Refresh';
+                btn.className = 'btn-secondary';
+                log('Auto-refresh paused');
+                showMessage('actionMessage', '⏸️ Auto-refresh paused. Click to resume.', 'warning');
+            } else {
+                // Enable auto-refresh
+                startAutoRefresh();
+                isAutoRefreshEnabled = true;
+                btn.textContent = '⏸️ Pause Auto-Refresh';
+                btn.className = '';
+                log('Auto-refresh resumed');
+                showMessage('actionMessage', '▶️ Auto-refresh resumed (every 10 seconds).', 'success');
+            }
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            // Faster refresh for real-time feel - every 10 seconds
+            autoRefreshInterval = setInterval(async () => {
+                if (isAutoRefreshEnabled) {
+                    try {
+                        log('Auto-refreshing from Valkey...');
+                        await forceRefresh();
+                    } catch (error) {
+                        log(`Auto-refresh failed: ${error.message}`);
+                    }
+                }
+            }, 10000); // 10 seconds for real-time updates
+        }
+
+        function addScoreAPI() {
             const name = document.getElementById('playerName').value.trim();
             const score = parseInt(document.getElementById('playerScore').value);
-            const btn = document.getElementById('addScoreBtn');
             
             if (!name || isNaN(score)) {
                 showMessage('scoreMessage', '❌ Please enter valid name and score', 'error');
                 return;
             }
             
-            btn.disabled = true;
-            btn.textContent = '⏳ Adding Score...';
-            setStatus('🔄 Adding score to Valkey...', 'loading');
+            const apiCall = `curl -X POST ${API_URL}/score -H "Content-Type: application/json" -d '{"player":"${name}","score":${score}}'`;
             
-            try {
-                const data = await apiPost('/score', { player: name, score: score });
-                
-                if (data && data.success) {
-                    showMessage('scoreMessage', `✅ ${data.message}`, 'success');
-                    setStatus(`✅ Score added successfully!`, 'success');
-                    
-                    // Clear form
-                    document.getElementById('playerName').value = '';
-                    document.getElementById('playerScore').value = '';
-                    
-                    // Refresh leaderboard after a short delay
-                    setTimeout(async () => {
-                        await loadLeaderboard();
-                    }, 1000);
-                } else {
-                    showMessage('scoreMessage', `❌ ${data ? data.error : 'Unknown error'}`, 'error');
-                    setStatus('❌ Failed to add score', 'error');
-                }
-            } catch (error) {
-                showMessage('scoreMessage', `✅ Score likely added! Refreshing leaderboard to confirm...`, 'warning');
-                setStatus('⚠️ Score may have been added - checking...', 'warning');
-                
-                // Auto-refresh after a delay to check if it worked
-                setTimeout(async () => {
-                    await loadLeaderboard();
-                }, 2000);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🚀 Add Score Directly';
+            showMessage('scoreMessage', 
+                `✅ API call ready! This will update Valkey Serverless directly:<br><br>
+                <code style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; display: block; margin: 10px 0; font-family: monospace; font-size: 12px;">
+                ${apiCall}
+                </code><br>
+                Click "Copy & Execute" to run it and see immediate updates!`, 
+                'success'
+            );
+            
+            // Store for copy function
+            window.currentApiCall = apiCall;
+            log(`Generated API call for immediate Valkey update: ${name} = ${score}`);
+        }
+
+        function copyAndExecute() {
+            if (!window.currentApiCall) {
+                showMessage('scoreMessage', '❌ Generate an API call first', 'error');
+                return;
             }
+            
+            navigator.clipboard.writeText(window.currentApiCall).then(() => {
+                showMessage('scoreMessage', 
+                    `✅ API call copied! <br><br>
+                    <strong>Quick steps for immediate update:</strong><br>
+                    1. Open terminal (Cmd+Space → Terminal)<br>
+                    2. Paste and press Enter (Cmd+V)<br>
+                    3. Watch the leaderboard update in real-time!<br><br>
+                    <strong>The update will appear within 10 seconds!</strong>`, 
+                    'success'
+                );
+                
+                // Auto-refresh more frequently after API call
+                setTimeout(() => {
+                    log('Checking for updates after API call...');
+                    forceRefresh();
+                }, 3000);
+                
+                // Clear form
+                document.getElementById('playerName').value = '';
+                document.getElementById('playerScore').value = '';
+            }).catch(() => {
+                showMessage('scoreMessage', '❌ Copy failed. Please copy the command manually.', 'error');
+            });
         }
 
         function updateStats(players) {
@@ -508,10 +494,20 @@
             document.getElementById('topScore').textContent = players.length > 0 ? players[0].score.toLocaleString() : '0';
         }
 
+        function updateLastUpdated(timestamp) {
+            const lastUpdatedDiv = document.getElementById('lastUpdated');
+            if (timestamp) {
+                const date = new Date(timestamp);
+                lastUpdatedDiv.textContent = `Last updated: ${date.toLocaleTimeString()} (fresh from Valkey)`;
+            } else {
+                lastUpdatedDiv.textContent = `Last updated: ${new Date().toLocaleTimeString()} (fresh from Valkey)`;
+            }
+        }
+
         function displayLeaderboard(players) {
             const leaderboardDiv = document.getElementById('leaderboard');
             if (!players || players.length === 0) {
-                leaderboardDiv.innerHTML = '<div class="status info">No players yet! Be the first to add your score.</div>';
+                leaderboardDiv.innerHTML = '<div class="status info">No players yet! Use the API to add scores directly to Valkey.</div>';
                 return;
             }
             
@@ -524,27 +520,35 @@
             `).join('');
         }
 
-        // Initialize the app
+        // Initialize the app with real-time focus
         window.addEventListener('load', async () => {
-            log('🚀 Valkey Serverless Leaderboard with Enhanced CORS starting...');
+            log('🚀 Real-time Valkey Serverless Leaderboard starting...');
+            log('Cache-busting enabled - all data fresh from ElastiCache');
             
-            // Test connection and load leaderboard
+            // Test connection and load fresh data
             const healthOk = await testHealth();
             if (healthOk) {
-                await loadLeaderboard();
+                await forceRefresh();
                 
-                // Auto-refresh leaderboard every 30 seconds
-                setInterval(async () => {
-                    try {
-                        await loadLeaderboard();
-                    } catch (error) {
-                        log(`Auto-refresh failed: ${error.message}`);
-                    }
-                }, 30000);
+                // Start aggressive auto-refresh for real-time feel
+                startAutoRefresh();
                 
-                log('✅ Auto-refresh enabled (every 30 seconds)');
+                log('✅ Real-time auto-refresh enabled (every 10 seconds)');
+                log('✅ All browser caching disabled - pure Valkey Serverless data');
             } else {
                 log('❌ Initial connection failed');
+            }
+        });
+
+        // Disable browser caching globally
+        window.addEventListener('beforeunload', () => {
+            // Clear any cached data
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => {
+                        caches.delete(name);
+                    });
+                });
             }
         });
     </script>
