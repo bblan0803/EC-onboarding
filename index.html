@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏆 Valkey Serverless Leaderboard - Reliable Real-Time</title>
+    <title>🏆 Valkey Serverless Leaderboard - Server No-Cache</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -40,6 +40,16 @@
             display: inline-block;
             margin: 5px;
             animation: pulse 2s infinite;
+        }
+        .server-badge {
+            background: #2196F3;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin: 5px;
         }
         @keyframes pulse {
             0% { opacity: 1; }
@@ -200,12 +210,12 @@
         }
         
         .cache-info {
-            background: rgba(76, 175, 80, 0.2);
-            border: 1px solid rgba(76, 175, 80, 0.5);
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid rgba(33, 150, 243, 0.5);
             padding: 15px;
             border-radius: 10px;
             margin: 20px 0;
-            color: #d4edda;
+            color: #bbdefb;
         }
         
         .last-updated {
@@ -234,7 +244,7 @@
         <div class="header">
             <h1>🏆 Valkey Serverless Leaderboard</h1>
             <div class="live-badge">🔴 LIVE</div>
-            <div class="live-badge">⚡ REAL-TIME</div>
+            <div class="server-badge">🚫 SERVER NO-CACHE</div>
             <div class="live-badge">☁️ VALKEY</div>
             <p><strong>API:</strong> https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com</p>
         </div>
@@ -242,12 +252,12 @@
         <div id="status" class="status loading">🔄 Connecting to Valkey Serverless...</div>
         
         <div class="cache-info">
-            <strong>⚡ Reliable Real-Time Connection</strong><br>
-            • Simple but effective cache-busting enabled<br>
-            • Timestamp-based fresh requests to Valkey<br>
-            • Fast 5-second refresh cycle for real-time updates<br>
-            • Direct connection to ElastiCache Valkey Serverless<br>
-            • Reliable proxy connection without over-engineering<br>
+            <strong>🚫 Server-Side Cache Prevention Active</strong><br>
+            • Lambda function sends strong no-cache headers<br>
+            • Cache-Control: no-cache, no-store, must-revalidate<br>
+            • Pragma: no-cache, Expires: 0<br>
+            • Browser respects server cache directives<br>
+            • Fresh data guaranteed from Valkey Serverless<br>
         </div>
         
         <div class="main-content">
@@ -261,9 +271,9 @@
             </div>
             
             <div class="section">
-                <h3>⚡ Real-Time Actions</h3>
-                <button onclick="testHealth()">🔍 Test Valkey Connection</button>
-                <button onclick="refreshNow()">🔄 Refresh Now</button>
+                <h3>⚡ Server No-Cache Actions</h3>
+                <button onclick="testHealth()">🔍 Test Valkey (Server Headers)</button>
+                <button onclick="refreshNow()">🔄 Refresh (No Browser Cache)</button>
                 <button onclick="toggleAutoRefresh()" id="autoRefreshBtn">⏸️ Pause Auto-Refresh</button>
                 
                 <div class="stats">
@@ -282,14 +292,14 @@
         </div>
         
         <div class="leaderboard">
-            <h3>🏅 Live Leaderboard (Real Valkey Data)</h3>
+            <h3>🏅 Live Leaderboard (Server No-Cache)</h3>
             <div class="last-updated" id="lastUpdated">Loading...</div>
-            <div id="leaderboard">Loading real-time data from Valkey Serverless...</div>
+            <div id="leaderboard">Loading fresh data from Valkey Serverless...</div>
         </div>
         
         <div class="debug">
-            <strong>🔧 Real-Time Debug Info:</strong><br>
-            <div id="debug">Initializing reliable connection...</div>
+            <strong>🔧 Server No-Cache Debug Info:</strong><br>
+            <div id="debug">Initializing server-side cache prevention...</div>
         </div>
     </div>
 
@@ -322,21 +332,17 @@
             }, 8000);
         }
 
-        // Simple but reliable cache-busting
-        async function apiGetFresh(endpoint) {
-            // Simple timestamp cache-buster that works reliably
-            const timestamp = Date.now();
-            const cacheBustedEndpoint = `${endpoint}?_t=${timestamp}`;
-            
+        // Simple API calls - server handles cache prevention
+        async function apiGet(endpoint) {
             refreshCounter++;
             document.getElementById('refreshCount').textContent = refreshCounter;
             
-            log(`Making fresh request #${refreshCounter} to ${endpoint}`);
+            log(`Making request #${refreshCounter} to ${endpoint} (server handles no-cache)`);
             
             try {
-                // Use the reliable proxy without over-complicating
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + cacheBustedEndpoint)}`;
-                log(`Using reliable proxy: ${proxyUrl.substring(0, 80)}...`);
+                // Use the reliable proxy - server sends no-cache headers
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + endpoint)}`;
+                log(`Using proxy: ${proxyUrl.substring(0, 80)}...`);
                 
                 const response = await fetch(proxyUrl);
                 log(`Response status: ${response.status} (Request #${refreshCounter})`);
@@ -346,7 +352,7 @@
                 }
 
                 const data = await response.json();
-                log(`Fresh data received from Valkey (Request #${refreshCounter})`);
+                log(`Data received from Valkey (Request #${refreshCounter}): cache_disabled=${data.cache_disabled}`);
                 return data;
             } catch (error) {
                 log(`API Error: ${error.message}`);
@@ -355,12 +361,13 @@
         }
 
         async function testHealth() {
-            setStatus('🔄 Testing connection to Valkey...', 'loading');
+            setStatus('🔄 Testing Valkey with server no-cache headers...', 'loading');
             try {
-                const data = await apiGetFresh('/health');
+                const data = await apiGet('/health');
                 if (data && data.success && data.ping === 'PONG') {
-                    setStatus(`✅ Connected to Valkey Serverless! Ping: ${data.ping}`, 'success');
-                    log(`Valkey timestamp: ${data.timestamp}`);
+                    const cacheStatus = data.cache_disabled ? 'DISABLED' : 'ENABLED';
+                    setStatus(`✅ Connected to Valkey! Ping: ${data.ping}, Cache: ${cacheStatus}`, 'success');
+                    log(`Valkey timestamp: ${data.timestamp}, Fresh data: ${data.fresh_data}`);
                     return true;
                 } else {
                     setStatus('❌ Unexpected response from Valkey', 'error');
@@ -373,14 +380,16 @@
         }
 
         async function refreshNow() {
-            setStatus('🔄 Refreshing from Valkey...', 'loading');
+            setStatus('🔄 Refreshing from Valkey (server no-cache)...', 'loading');
             try {
-                const data = await apiGetFresh('/leaderboard');
+                const data = await apiGet('/leaderboard');
                 if (data && data.leaderboard) {
                     displayLeaderboard(data.leaderboard);
                     updateStats(data.leaderboard);
-                    updateLastUpdated(data.timestamp, refreshCounter);
-                    setStatus(`✅ Fresh data loaded! ${data.leaderboard.length} players (Refresh #${refreshCounter})`, 'success');
+                    updateLastUpdated(data.timestamp, refreshCounter, data.cache_disabled);
+                    const cacheStatus = data.cache_disabled ? 'NO-CACHE' : 'CACHED';
+                    setStatus(`✅ Fresh data loaded! ${data.leaderboard.length} players (${cacheStatus})`, 'success');
+                    log(`Data source: ${data.data_source}, Fresh: ${data.fresh_data}`);
                 } else {
                     throw new Error('Invalid leaderboard data');
                 }
@@ -420,7 +429,7 @@
                 clearInterval(autoRefreshInterval);
             }
             
-            // Fast refresh for real-time feel - every 5 seconds
+            // 5-second refresh with server-side cache prevention
             autoRefreshInterval = setInterval(async () => {
                 if (isAutoRefreshEnabled) {
                     try {
@@ -429,7 +438,7 @@
                         log(`Auto-refresh failed: ${error.message}`);
                     }
                 }
-            }, 5000); // 5 seconds for real-time updates
+            }, 5000);
         }
 
         function addScoreAPI() {
@@ -444,11 +453,11 @@
             const apiCall = `curl -X POST ${API_URL}/score -H "Content-Type: application/json" -d '{"player":"${name}","score":${score}}'`;
             
             showMessage('scoreMessage', 
-                `✅ API call ready for Valkey update:<br><br>
+                `✅ API call ready for direct Valkey update:<br><br>
                 <code style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; display: block; margin: 10px 0; font-family: monospace; font-size: 12px;">
                 ${apiCall}
                 </code><br>
-                This will update your Valkey Serverless cluster directly!`, 
+                Server will return no-cache headers to ensure fresh data!`, 
                 'success'
             );
             
@@ -468,8 +477,8 @@
                     <strong>Execute in terminal:</strong><br>
                     1. Open terminal<br>
                     2. Paste and press Enter<br>
-                    3. Watch for updates in next refresh (5 seconds)!<br><br>
-                    <strong>Your score will appear in the live leaderboard!</strong>`, 
+                    3. Server will prevent caching - fresh data guaranteed!<br><br>
+                    <strong>Your score will appear in the next refresh!</strong>`, 
                     'success'
                 );
                 
@@ -491,18 +500,22 @@
             document.getElementById('totalPlayers').textContent = players.length;
         }
 
-        function updateLastUpdated(timestamp, refreshNum) {
+        function updateLastUpdated(timestamp, refreshNum, cacheDisabled) {
             const lastUpdatedDiv = document.getElementById('lastUpdated');
+            const cacheStatus = cacheDisabled ? 'SERVER NO-CACHE ✅' : 'CACHE ENABLED ❌';
+            
             if (timestamp) {
                 const date = new Date(timestamp);
                 lastUpdatedDiv.innerHTML = `
                     <strong>Last updated:</strong> ${date.toLocaleTimeString()}<br>
-                    <strong>Refresh #${refreshNum}</strong> - Fresh from Valkey Serverless
+                    <strong>Refresh #${refreshNum}</strong> - ${cacheStatus}<br>
+                    <strong>Data source:</strong> Valkey Serverless
                 `;
             } else {
                 lastUpdatedDiv.innerHTML = `
                     <strong>Last updated:</strong> ${new Date().toLocaleTimeString()}<br>
-                    <strong>Refresh #${refreshNum}</strong> - Fresh from Valkey Serverless
+                    <strong>Refresh #${refreshNum}</strong> - ${cacheStatus}<br>
+                    <strong>Data source:</strong> Valkey Serverless
                 `;
             }
         }
@@ -523,21 +536,21 @@
             `).join('');
         }
 
-        // Initialize with reliable connection
+        // Initialize with server-side cache prevention
         window.addEventListener('load', async () => {
-            log('🚀 Reliable Real-Time Valkey Leaderboard starting...');
-            log('Simple timestamp cache-busting enabled');
+            log('🚀 Server No-Cache Valkey Leaderboard starting...');
+            log('Lambda function sends strong no-cache headers');
             
             // Test connection and load data
             const healthOk = await testHealth();
             if (healthOk) {
                 await refreshNow();
                 
-                // Start reliable auto-refresh
+                // Start auto-refresh with server-side cache prevention
                 startAutoRefresh();
                 
-                log('✅ Reliable auto-refresh enabled (every 5 seconds)');
-                log('✅ Connection stable - ready for real-time updates');
+                log('✅ Auto-refresh enabled (every 5 seconds)');
+                log('✅ Server-side cache prevention active');
             } else {
                 log('❌ Initial connection failed');
             }
