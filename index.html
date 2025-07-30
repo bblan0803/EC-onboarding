@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Valkey Serverless Leaderboard - Onboarding Project</title>
+    <title>Valkey Serverless Leaderboard - Real AWS Infrastructure</title>
     <style>
         * {
             margin: 0;
@@ -49,6 +49,22 @@
             padding: 15px;
             border-radius: 8px;
             margin-top: 15px;
+        }
+        
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
         
         .content {
@@ -223,22 +239,6 @@
             font-weight: bold;
         }
         
-        .live-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background: #28a745;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        
         @media (max-width: 768px) {
             .content {
                 grid-template-columns: 1fr;
@@ -259,10 +259,11 @@
     <div class="container">
         <div class="header">
             <h1>🏆 Valkey Serverless Leaderboard</h1>
-            <p>AWS ElastiCache Valkey Serverless - Onboarding Project Demo</p>
+            <p>Real AWS ElastiCache Valkey Serverless - Live Demo</p>
             <div class="project-info">
-                <div><span class="live-indicator"></span><strong>Live Demo:</strong> Real AWS infrastructure in action</div>
-                <div><strong>Developer:</strong> Rong | <strong>Account:</strong> 132003290846 (Isengard) | <strong>Region:</strong> us-west-2</div>
+                <div><span class="live-indicator"></span><strong>Live Connection:</strong> Real AWS infrastructure in action</div>
+                <div><strong>API Gateway:</strong> u3ry7t6rah | <strong>Valkey Cluster:</strong> valkey-leaderboard-public</div>
+                <div><strong>Account:</strong> 132003290846 (Isengard) | <strong>Region:</strong> us-west-2</div>
             </div>
         </div>
         
@@ -291,19 +292,20 @@
                     </div>
                 </div>
                 <button onclick="loadLeaderboard()">🔄 Refresh from Valkey</button>
+                <button onclick="testConnection()">🔍 Test Connection</button>
             </div>
             
             <div class="section demo-section">
                 <h3>🎮 Demo Controls</h3>
                 <div class="demo-buttons">
                     <button class="demo-button" onclick="addSampleData()">📊 Add Sample Players</button>
-                    <button class="demo-button" onclick="testConnection()">🔍 Test Valkey Connection</button>
                     <button class="demo-button" onclick="showArchitecture()">🏗️ Show Architecture</button>
+                    <button class="demo-button" onclick="showAPIDetails()">🔗 Show API Details</button>
                 </div>
             </div>
             
             <div class="section tech-info">
-                <h3>⚡ Technical Implementation</h3>
+                <h3>⚡ Real AWS Infrastructure</h3>
                 <div class="tech-details">
                     <div class="tech-item">
                         <strong>Database</strong>
@@ -314,20 +316,20 @@
                         <span>valkey-leaderboard-public</span>
                     </div>
                     <div class="tech-item">
+                        <strong>API Gateway</strong>
+                        <span>u3ry7t6rah (HTTP API)</span>
+                    </div>
+                    <div class="tech-item">
+                        <strong>Lambda Function</strong>
+                        <span>valkey-connectivity-test</span>
+                    </div>
+                    <div class="tech-item">
                         <strong>Data Structures</strong>
                         <span>ZSET (rankings) + HSET (profiles)</span>
                     </div>
                     <div class="tech-item">
-                        <strong>Backend</strong>
-                        <span>AWS Lambda (Python)</span>
-                    </div>
-                    <div class="tech-item">
                         <strong>Performance</strong>
                         <span>Sub-millisecond operations</span>
-                    </div>
-                    <div class="tech-item">
-                        <strong>Scalability</strong>
-                        <span>Serverless auto-scaling</span>
                     </div>
                 </div>
             </div>
@@ -335,6 +337,9 @@
     </div>
 
     <script>
+        // Your real API Gateway endpoint
+        const API_BASE_URL = 'https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com';
+        
         // Load leaderboard on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadLeaderboard();
@@ -363,16 +368,35 @@
             showStatus(`Adding ${player} with ${score} points to Valkey...`, 'success');
             
             try {
-                // Simulate the Lambda call (in production, this would be an API Gateway endpoint)
-                await simulateValkeyOperation('add_score', { player, score });
+                const response = await fetch(`${API_BASE_URL}/score`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        player: player,
+                        score: score
+                    })
+                });
                 
-                showStatus(`✅ Success! ${player} added with ${score} points`, 'success');
-                document.getElementById('scoreForm').reset();
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 
-                // Refresh leaderboard after adding
-                setTimeout(loadLeaderboard, 1000);
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus(`✅ Success! ${player} added with ${score} points to Valkey`, 'success');
+                    document.getElementById('scoreForm').reset();
+                    
+                    // Refresh leaderboard after adding
+                    setTimeout(loadLeaderboard, 1000);
+                } else {
+                    showStatus(`❌ Error: ${result.error || 'Failed to add score'}`, 'error');
+                }
                 
             } catch (error) {
+                console.error('Submit score error:', error);
                 showStatus(`❌ Error: ${error.message}`, 'error');
             } finally {
                 form.classList.remove('loading');
@@ -383,11 +407,16 @@
             const listDiv = document.getElementById('leaderboardList');
             
             try {
-                // Get current leaderboard data
-                const leaderboard = await simulateValkeyOperation('get_leaderboard');
+                const response = await fetch(`${API_BASE_URL}/leaderboard`);
                 
-                if (leaderboard && leaderboard.length > 0) {
-                    listDiv.innerHTML = leaderboard.map((player, index) => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.leaderboard && result.leaderboard.length > 0) {
+                    listDiv.innerHTML = result.leaderboard.map((player, index) => {
                         const rankEmoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
                         return `
                             <div class="leaderboard-item">
@@ -405,6 +434,7 @@
                     `;
                 }
             } catch (error) {
+                console.error('Load leaderboard error:', error);
                 listDiv.innerHTML = `
                     <div style="text-align: center; color: #e74c3c; padding: 20px;">
                         ❌ Error loading from Valkey: ${error.message}
@@ -426,8 +456,8 @@
             
             try {
                 for (const playerData of samplePlayers) {
-                    await simulateValkeyOperation('add_score', playerData);
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    await submitScoreAPI(playerData.player, playerData.score);
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
                 
                 showStatus('✅ Sample data added to Valkey!', 'success');
@@ -437,75 +467,87 @@
             }
         }
         
+        async function submitScoreAPI(player, score) {
+            const response = await fetch(`${API_BASE_URL}/score`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ player, score })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to add ${player}: ${response.statusText}`);
+            }
+            
+            return await response.json();
+        }
+        
         async function testConnection() {
             showStatus('Testing Valkey Serverless connection...', 'success');
             
             try {
-                await simulateValkeyOperation('test_connection');
+                const response = await fetch(`${API_BASE_URL}/health`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
                 showStatus('✅ Valkey Serverless connection successful!', 'success');
             } catch (error) {
+                console.error('Connection test error:', error);
                 showStatus(`❌ Connection test failed: ${error.message}`, 'error');
             }
         }
         
         function showArchitecture() {
-            alert(`🏗️ VALKEY SERVERLESS ARCHITECTURE
+            alert(`🏗️ REAL VALKEY SERVERLESS ARCHITECTURE
 
 📱 Frontend (This App)
-    ↓
-🌐 API Gateway (CORS-enabled)
-    ↓  
-⚡ AWS Lambda Function
-    ↓
+    ↓ HTTPS
+🌐 API Gateway (u3ry7t6rah)
+    ↓ Lambda Integration  
+⚡ AWS Lambda (valkey-connectivity-test)
+    ↓ VPC Connection
 🔒 Private VPC
-    ↓
+    ↓ TLS Connection
 🗄️ AWS ElastiCache Valkey Serverless
+   (valkey-leaderboard-public)
 
-🔑 Key Features:
-• ZSET for automatic ranking
-• HSET for player profiles  
-• Sub-millisecond performance
+🔑 Real Infrastructure Features:
+• ZSET for automatic ranking in Valkey
+• HSET for player profiles in Valkey
+• Sub-millisecond Valkey performance
 • Serverless auto-scaling
 • Production security (VPC isolation)
+• CORS-enabled API Gateway
 
-🎯 This demonstrates real AWS best practices!`);
+🎯 This is REAL AWS infrastructure, not a simulation!`);
         }
         
-        // Simulate Valkey operations (in production, these would be API Gateway calls)
-        async function simulateValkeyOperation(operation, data = {}) {
-            // Add realistic delay to simulate network/database operations
-            await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 800));
-            
-            // Get current data from localStorage (simulating persistent Valkey data)
-            let leaderboard = JSON.parse(localStorage.getItem('valkeyLeaderboard') || '[]');
-            
-            switch (operation) {
-                case 'test_connection':
-                    return { success: true, message: 'PONG' };
-                    
-                case 'get_leaderboard':
-                    // Sort by score descending
-                    return leaderboard.sort((a, b) => b.score - a.score);
-                    
-                case 'add_score':
-                    const { player, score } = data;
-                    
-                    // Update or add player
-                    const existingIndex = leaderboard.findIndex(p => p.player === player);
-                    if (existingIndex >= 0) {
-                        leaderboard[existingIndex].score = score;
-                    } else {
-                        leaderboard.push({ player, score });
-                    }
-                    
-                    // Save back to localStorage
-                    localStorage.setItem('valkeyLeaderboard', JSON.stringify(leaderboard));
-                    
-                    return { success: true, player, score };
-                    
-                default:
-                    throw new Error('Unknown operation');
-            }
+        function showAPIDetails() {
+            alert(`🔗 API GATEWAY DETAILS
+
+📍 Endpoint: ${API_BASE_URL}
+🆔 API ID: u3ry7t6rah
+🌍 Region: us-west-2
+🏢 Account: 132003290846 (Isengard)
+
+📋 Available Routes:
+• GET /leaderboard - Get current rankings
+• POST /score - Add/update player score
+• GET /health - Test connection
+
+🔒 CORS Configuration:
+• Origin: https://bblan0803.github.io
+• Methods: GET, POST, OPTIONS
+• Headers: content-type, authorization, etc.
+
+⚡ Backend Integration:
+• Lambda: valkey-connectivity-test
+• Valkey: valkey-leaderboard-public
+• Data: Real-time from Valkey Serverless`);
         }
         
         function showStatus(message, type) {
@@ -518,18 +560,6 @@
             setTimeout(() => {
                 statusDiv.style.display = 'none';
             }, 5000);
-        }
-        
-        // Initialize with some demo data if none exists
-        if (!localStorage.getItem('valkeyLeaderboard')) {
-            const initialData = [
-                { player: 'DemoPlayer', score: 3000 },
-                { player: 'Diana', score: 2800 },
-                { player: 'Charlie', score: 2200 },
-                { player: 'TestPlayer', score: 1500 },
-                { player: 'Alice', score: 972 }
-            ];
-            localStorage.setItem('valkeyLeaderboard', JSON.stringify(initialData));
         }
     </script>
 </body>
