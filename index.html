@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏆 Valkey Serverless Leaderboard - CORS Fixed</title>
+    <title>🏆 Valkey Serverless Leaderboard - Direct API Gateway</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -40,6 +40,16 @@
             display: inline-block;
             margin: 5px;
             animation: pulse 2s infinite;
+        }
+        .direct-badge {
+            background: #2196F3;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin: 5px;
         }
         @keyframes pulse {
             0% { opacity: 1; }
@@ -100,12 +110,6 @@
             cursor: not-allowed; 
             transform: none;
             box-shadow: none;
-        }
-        .btn-secondary {
-            background: linear-gradient(135deg, #ff6b6b, #feca57);
-        }
-        .btn-secondary:hover {
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
         }
         
         input {
@@ -200,12 +204,12 @@
         }
         
         .cors-fix {
-            background: rgba(76, 175, 80, 0.2);
-            border: 1px solid rgba(76, 175, 80, 0.5);
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid rgba(33, 150, 243, 0.5);
             padding: 15px;
             border-radius: 10px;
             margin: 20px 0;
-            color: #d4edda;
+            color: #e3f2fd;
         }
         
         @media (max-width: 768px) {
@@ -224,7 +228,7 @@
         <div class="header">
             <h1>🏆 Valkey Serverless Leaderboard</h1>
             <div class="live-badge">🔴 LIVE</div>
-            <div class="live-badge">🚀 Direct Submit</div>
+            <div class="direct-badge">🎯 Direct API</div>
             <div class="live-badge">☁️ AWS</div>
             <p><strong>API:</strong> https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com</p>
         </div>
@@ -232,9 +236,9 @@
         <div id="status" class="status loading">🔄 Connecting to Valkey Serverless...</div>
         
         <div class="cors-fix">
-            <strong>✅ Enhanced CORS Solution!</strong><br>
-            This version uses a specialized proxy service that properly handles JSON POST requests. 
-            You can now add scores directly from the website with proper JSON formatting!
+            <strong>🎯 Direct API Gateway Connection!</strong><br>
+            This version tries to connect directly to your API Gateway first. If CORS is properly configured, 
+            it will work without any proxy. Falls back to proxy only if direct connection fails.
         </div>
         
         <div class="main-content">
@@ -280,6 +284,7 @@
     <script>
         const API_URL = 'https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com';
         let debugLog = [];
+        let usingProxy = false;
 
         function log(message) {
             const timestamp = new Date().toLocaleTimeString();
@@ -303,131 +308,99 @@
             }, 8000);
         }
 
-        // GET requests using CORS proxy
-        async function apiGet(endpoint) {
-            log(`Making GET request to ${endpoint}`);
+        // Try direct API Gateway first, then fallback to proxy
+        async function apiRequest(endpoint, options = {}) {
+            const url = API_URL + endpoint;
+            log(`Making ${options.method || 'GET'} request to ${endpoint}`);
             
             try {
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + endpoint)}`;
-                log(`Using proxy: ${proxyUrl}`);
+                // Try direct API Gateway connection first
+                log('🎯 Attempting direct API Gateway connection...');
+                const response = await fetch(url, {
+                    method: options.method || 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    body: options.body ? JSON.stringify(options.body) : undefined
+                });
                 
-                const response = await fetch(proxyUrl);
-                log(`Response status: ${response.status}`);
+                log(`Direct response status: ${response.status}`);
                 
-                if (!response.ok) {
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ Direct API Gateway connection successful!');
+                    if (usingProxy) {
+                        usingProxy = false;
+                        log('🎯 Switched back to direct connection');
+                    }
+                    return data;
+                } else {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-
-                const data = await response.json();
-                log(`Response received: ${JSON.stringify(data).substring(0, 100)}...`);
-                return data;
-            } catch (error) {
-                log(`API Error: ${error.message}`);
-                throw error;
+                
+            } catch (directError) {
+                log(`❌ Direct connection failed: ${directError.message}`);
+                
+                // Fallback to CORS proxy
+                return await proxyRequest(endpoint, options);
             }
         }
 
-        // POST requests using a different CORS proxy that supports proper JSON
-        async function apiPost(endpoint, body) {
-            log(`Making POST request to ${endpoint}`);
-            log(`Request body: ${JSON.stringify(body)}`);
+        // CORS proxy fallback
+        async function proxyRequest(endpoint, options = {}) {
+            log('🔄 Falling back to CORS proxy...');
+            usingProxy = true;
             
             try {
-                // Use cors-anywhere proxy which properly handles POST with JSON
-                const proxyUrl = `https://cors-anywhere.herokuapp.com/${API_URL}${endpoint}`;
-                log(`Using CORS proxy: ${proxyUrl}`);
-                
-                const response = await fetch(proxyUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify(body)
-                });
-                
-                log(`Response status: ${response.status}`);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    log(`Error response: ${errorText}`);
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                if (options.method === 'POST') {
+                    // For POST requests, try cors-anywhere first
+                    const proxyUrl = `https://cors-anywhere.herokuapp.com/${API_URL}${endpoint}`;
+                    log(`Using CORS proxy: ${proxyUrl}`);
+                    
+                    const response = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify(options.body)
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        log('✅ CORS proxy POST successful');
+                        return data;
+                    } else {
+                        throw new Error(`Proxy error: ${response.status}`);
+                    }
+                } else {
+                    // For GET requests, use allorigins
+                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + endpoint)}`;
+                    log(`Using GET proxy: ${proxyUrl}`);
+                    
+                    const response = await fetch(proxyUrl);
+                    if (response.ok) {
+                        const data = await response.json();
+                        log('✅ CORS proxy GET successful');
+                        return data;
+                    } else {
+                        throw new Error(`Proxy error: ${response.status}`);
+                    }
                 }
-
-                const data = await response.json();
-                log(`Response received: ${JSON.stringify(data)}`);
-                return data;
-            } catch (error) {
-                log(`CORS proxy failed: ${error.message}`);
-                
-                // Fallback to a different proxy service
-                return await fallbackApiPost(endpoint, body);
-            }
-        }
-
-        // Fallback POST method using a different proxy
-        async function fallbackApiPost(endpoint, body) {
-            log('Trying fallback POST method with different proxy...');
-            
-            try {
-                // Use a different proxy service
-                const proxyUrl = 'https://api.codetabs.com/v1/proxy';
-                const targetUrl = API_URL + endpoint;
-                
-                const response = await fetch(`${proxyUrl}?quest=${encodeURIComponent(targetUrl)}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(body)
-                });
-                
-                log(`Fallback response status: ${response.status}`);
-                
-                if (!response.ok) {
-                    throw new Error(`Fallback proxy error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                log(`Fallback response: ${JSON.stringify(data)}`);
-                return data;
-            } catch (error) {
-                log(`Fallback also failed: ${error.message}`);
-                
-                // Final fallback - use fetch with no-cors mode and assume success
-                return await finalFallback(endpoint, body);
-            }
-        }
-
-        // Final fallback - fire and forget approach
-        async function finalFallback(endpoint, body) {
-            log('Using final fallback - fire and forget approach...');
-            
-            try {
-                // Make the request with no-cors mode
-                await fetch(API_URL + endpoint, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(body)
-                });
-                
-                log('Request sent with no-cors mode - assuming success');
-                return { success: true, message: `Score updated for ${body.player}: ${body.score}` };
-            } catch (error) {
-                log(`Final fallback failed: ${error.message}`);
-                throw new Error('All methods failed - please try the curl command');
+            } catch (proxyError) {
+                log(`❌ CORS proxy also failed: ${proxyError.message}`);
+                throw new Error('Both direct and proxy connections failed');
             }
         }
 
         async function testHealth() {
             setStatus('🔄 Testing connection to Valkey...', 'loading');
             try {
-                const data = await apiGet('/health');
+                const data = await apiRequest('/health');
                 if (data && data.success && data.ping === 'PONG') {
-                    setStatus(`✅ Connected to Valkey Serverless! Ping: ${data.ping}`, 'success');
+                    const connectionType = usingProxy ? 'via CORS proxy' : 'directly';
+                    setStatus(`✅ Connected to Valkey Serverless ${connectionType}! Ping: ${data.ping}`, 'success');
                     return true;
                 } else {
                     setStatus('❌ Unexpected response from Valkey', 'error');
@@ -442,11 +415,12 @@
         async function loadLeaderboard() {
             setStatus('🔄 Loading leaderboard from Valkey...', 'loading');
             try {
-                const data = await apiGet('/leaderboard');
+                const data = await apiRequest('/leaderboard');
                 if (data && data.leaderboard) {
                     displayLeaderboard(data.leaderboard);
                     updateStats(data.leaderboard);
-                    setStatus(`✅ Loaded ${data.leaderboard.length} players from Valkey Serverless`, 'success');
+                    const connectionType = usingProxy ? 'via proxy' : 'directly';
+                    setStatus(`✅ Loaded ${data.leaderboard.length} players ${connectionType}`, 'success');
                 } else {
                     throw new Error('Invalid leaderboard data');
                 }
@@ -471,11 +445,15 @@
             setStatus('🔄 Adding score to Valkey...', 'loading');
             
             try {
-                const data = await apiPost('/score', { player: name, score: score });
+                const data = await apiRequest('/score', {
+                    method: 'POST',
+                    body: { player: name, score: score }
+                });
                 
                 if (data && data.success) {
-                    showMessage('scoreMessage', `✅ ${data.message}`, 'success');
-                    setStatus(`✅ Score added successfully!`, 'success');
+                    const connectionType = usingProxy ? 'via proxy' : 'directly';
+                    showMessage('scoreMessage', `✅ ${data.message} (${connectionType})`, 'success');
+                    setStatus(`✅ Score added successfully ${connectionType}!`, 'success');
                     
                     // Clear form
                     document.getElementById('playerName').value = '';
@@ -490,13 +468,8 @@
                     setStatus('❌ Failed to add score', 'error');
                 }
             } catch (error) {
-                showMessage('scoreMessage', `✅ Score likely added! Refreshing leaderboard to confirm...`, 'warning');
-                setStatus('⚠️ Score may have been added - checking...', 'warning');
-                
-                // Auto-refresh after a delay to check if it worked
-                setTimeout(async () => {
-                    await loadLeaderboard();
-                }, 2000);
+                showMessage('scoreMessage', `❌ Error: ${error.message}`, 'error');
+                setStatus(`❌ Error: ${error.message}`, 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🚀 Add Score Directly';
@@ -526,7 +499,7 @@
 
         // Initialize the app
         window.addEventListener('load', async () => {
-            log('🚀 Valkey Serverless Leaderboard with Enhanced CORS starting...');
+            log('🚀 Valkey Serverless Leaderboard starting with direct API Gateway...');
             
             // Test connection and load leaderboard
             const healthOk = await testHealth();
