@@ -239,6 +239,19 @@
             font-weight: bold;
         }
         
+        .cors-notice {
+            grid-column: 1 / -1;
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .cors-notice h3 {
+            color: #0c5460;
+            margin-bottom: 10px;
+        }
+        
         @media (max-width: 768px) {
             .content {
                 grid-template-columns: 1fr;
@@ -261,7 +274,7 @@
             <h1>🏆 Valkey Serverless Leaderboard</h1>
             <p>Real AWS ElastiCache Valkey Serverless - Live Demo</p>
             <div class="project-info">
-                <div><span class="live-indicator"></span><strong>Live Connection:</strong> Real AWS infrastructure in action</div>
+                <div><span class="live-indicator"></span><strong>Live Connection:</strong> Real AWS infrastructure via CORS proxy</div>
                 <div><strong>API Gateway:</strong> u3ry7t6rah | <strong>Valkey Cluster:</strong> valkey-leaderboard-public</div>
                 <div><strong>Account:</strong> 132003290846 (Isengard) | <strong>Region:</strong> us-west-2</div>
             </div>
@@ -304,6 +317,19 @@
                 </div>
             </div>
             
+            <div class="section cors-notice">
+                <h3>🔧 CORS Proxy Notice</h3>
+                <p><strong>This application connects to your REAL Valkey Serverless cluster!</strong></p>
+                <p>Due to API Gateway CORS deployment issues, we're using a CORS proxy to access your actual AWS infrastructure:</p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>✅ <strong>Real Data:</strong> All scores stored in valkey-leaderboard-public</li>
+                    <li>✅ <strong>Real Lambda:</strong> Uses valkey-connectivity-test function</li>
+                    <li>✅ <strong>Real Performance:</strong> Sub-millisecond Valkey operations</li>
+                    <li>⚠️ <strong>CORS Workaround:</strong> Proxy bypasses browser restrictions</li>
+                </ul>
+                <p><em>In production, fix CORS by redeploying API Gateway with proper headers.</em></p>
+            </div>
+            
             <div class="section tech-info">
                 <h3>⚡ Real AWS Infrastructure</h3>
                 <div class="tech-details">
@@ -340,6 +366,9 @@
         // Your real API Gateway endpoint
         const API_BASE_URL = 'https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com';
         
+        // CORS proxy for GitHub Pages
+        const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+        
         // Load leaderboard on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadLeaderboard();
@@ -368,16 +397,33 @@
             showStatus(`Adding ${player} with ${score} points to Valkey...`, 'success');
             
             try {
-                const response = await fetch(`${API_BASE_URL}/score`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        player: player,
-                        score: score
-                    })
-                });
+                // Try direct connection first, then fallback to proxy
+                let response;
+                try {
+                    response = await fetch(`${API_BASE_URL}/score`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            player: player,
+                            score: score
+                        })
+                    });
+                } catch (corsError) {
+                    console.log('Direct connection failed, using CORS proxy...');
+                    // Use CORS proxy for POST requests
+                    response = await fetch(`${CORS_PROXY}${encodeURIComponent(API_BASE_URL + '/score')}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            player: player,
+                            score: score
+                        })
+                    });
+                }
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -407,7 +453,14 @@
             const listDiv = document.getElementById('leaderboardList');
             
             try {
-                const response = await fetch(`${API_BASE_URL}/leaderboard`);
+                // Try direct connection first, then fallback to proxy
+                let response;
+                try {
+                    response = await fetch(`${API_BASE_URL}/leaderboard`);
+                } catch (corsError) {
+                    console.log('Direct connection failed, using CORS proxy...');
+                    response = await fetch(`${CORS_PROXY}${encodeURIComponent(API_BASE_URL + '/leaderboard')}`);
+                }
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -426,6 +479,14 @@
                             </div>
                         `;
                     }).join('');
+                    
+                    // Show data source info
+                    if (result.data_source) {
+                        const sourceInfo = document.createElement('div');
+                        sourceInfo.style.cssText = 'text-align: center; color: #28a745; font-size: 12px; margin-top: 10px; font-weight: 600;';
+                        sourceInfo.innerHTML = `✅ Live data from ${result.data_source} | Updated: ${new Date(result.timestamp).toLocaleTimeString()}`;
+                        listDiv.appendChild(sourceInfo);
+                    }
                 } else {
                     listDiv.innerHTML = `
                         <div style="text-align: center; color: #6c757d; padding: 20px;">
@@ -468,26 +529,49 @@
         }
         
         async function submitScoreAPI(player, score) {
-            const response = await fetch(`${API_BASE_URL}/score`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ player, score })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Failed to add ${player}: ${response.statusText}`);
+            try {
+                const response = await fetch(`${API_BASE_URL}/score`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ player, score })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to add ${player}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (corsError) {
+                // Fallback to CORS proxy
+                const response = await fetch(`${CORS_PROXY}${encodeURIComponent(API_BASE_URL + '/score')}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ player, score })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to add ${player}: ${response.statusText}`);
+                }
+                
+                return await response.json();
             }
-            
-            return await response.json();
         }
         
         async function testConnection() {
             showStatus('Testing Valkey Serverless connection...', 'success');
             
             try {
-                const response = await fetch(`${API_BASE_URL}/health`);
+                let response;
+                try {
+                    response = await fetch(`${API_BASE_URL}/health`);
+                } catch (corsError) {
+                    console.log('Direct connection failed, using CORS proxy...');
+                    response = await fetch(`${CORS_PROXY}${encodeURIComponent(API_BASE_URL + '/health')}`);
+                }
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -505,7 +589,7 @@
             alert(`🏗️ REAL VALKEY SERVERLESS ARCHITECTURE
 
 📱 Frontend (This App)
-    ↓ HTTPS
+    ↓ HTTPS (via CORS proxy)
 🌐 API Gateway (u3ry7t6rah)
     ↓ Lambda Integration  
 ⚡ AWS Lambda (valkey-connectivity-test)
@@ -521,9 +605,10 @@
 • Sub-millisecond Valkey performance
 • Serverless auto-scaling
 • Production security (VPC isolation)
-• CORS-enabled API Gateway
+• CORS proxy for browser compatibility
 
-🎯 This is REAL AWS infrastructure, not a simulation!`);
+🎯 This connects to REAL AWS infrastructure!
+All data is stored in your actual Valkey cluster.`);
         }
         
         function showAPIDetails() {
@@ -539,15 +624,17 @@
 • POST /score - Add/update player score
 • GET /health - Test connection
 
-🔒 CORS Configuration:
-• Origin: https://bblan0803.github.io
-• Methods: GET, POST, OPTIONS
-• Headers: content-type, authorization, etc.
+🔒 CORS Configuration Issue:
+• CORS configured but not properly deployed
+• Using CORS proxy as workaround
+• All data still goes to real Valkey cluster
 
 ⚡ Backend Integration:
 • Lambda: valkey-connectivity-test
 • Valkey: valkey-leaderboard-public
-• Data: Real-time from Valkey Serverless`);
+• Data: Real-time from Valkey Serverless
+
+🎯 This is your REAL AWS infrastructure!`);
         }
         
         function showStatus(message, type) {
