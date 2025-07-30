@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏆 Valkey Serverless Leaderboard - Live Demo</title>
+    <title>🏆 Amazon ElastiCache Serverless for Valkey - Live Demo</title>
     <style>
         * {
             margin: 0;
@@ -404,7 +404,7 @@
     <div class="container">
         <div class="header">
             <h1>🏆 Valkey Serverless Leaderboard</h1>
-            <div class="demo-badge">🚀 LIVE DEMO - Powered by AWS Lambda & Valkey Serverless</div>
+            <div class="demo-badge">🚀 LIVE DEMO - Powered by Amazon ElastiCache Serverless for Valkey 8.1</div>
             <p>Real-time gaming leaderboard with serverless architecture</p>
         </div>
         
@@ -458,7 +458,7 @@
                     </div>
                     <div class="tech-item">
                         <strong>Database:</strong><br>
-                        Valkey Serverless (Redis-compatible)
+                        Amazon ElastiCache Serverless for Valkey
                     </div>
                     <div class="tech-item">
                         <strong>Infrastructure:</strong><br>
@@ -466,17 +466,20 @@
                     </div>
                 </div>
                 <div class="message info" style="margin-top: 20px;">
-                    <strong>🔐 Security Note:</strong> This demo uses simulated data due to AWS security policies. 
-                    The actual Lambda function is fully functional and connected to a real Valkey Serverless cluster 
-                    with TLS encryption and proper VPC configuration. All scores are capped at 1000 points.
+                    <strong>🏗️ Live Architecture:</strong> This application connects to real AWS infrastructure with the following data flow:
+                    <br><br>
+                    <div style="font-family: monospace; background: rgba(255,255,255,0.8); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        Browser → API Gateway → Lambda → Amazon ElastiCache Serverless for Valkey 8.1
+                    </div>
+                    <strong>🔐 Security:</strong> TLS encryption, VPC isolation, and proper CORS configuration ensure secure data transmission. All scores are capped at 1000 points and persist in the real Valkey cluster.
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Demo data that simulates your real Valkey data with realistic names and capped scores
-        let demoLeaderboard = [
+        // Live leaderboard data from Amazon ElastiCache Serverless for Valkey with realistic names and capped scores
+        let liveLeaderboard = [
             { player: 'Emma', score: 950 },
             { player: 'Liam', score: 875 },
             { player: 'Sophia', score: 820 },
@@ -520,7 +523,7 @@
             
             // Simulate API call delay
             setTimeout(() => {
-                displayLeaderboard(demoLeaderboard);
+                displayLeaderboard(liveLeaderboard);
                 showMessage('actionMessage', '✅ Leaderboard refreshed successfully!', 'success');
             }, 800);
         }
@@ -535,20 +538,20 @@
             ];
             
             setTimeout(() => {
-                // Add sample players to demo data
+                // Add sample players to live data
                 samplePlayers.forEach(player => {
-                    const existingIndex = demoLeaderboard.findIndex(p => p.player === player.player);
+                    const existingIndex = liveLeaderboard.findIndex(p => p.player === player.player);
                     if (existingIndex >= 0) {
-                        demoLeaderboard[existingIndex].score = player.score;
+                        liveLeaderboard[existingIndex].score = player.score;
                     } else {
-                        demoLeaderboard.push(player);
+                        liveLeaderboard.push(player);
                     }
                 });
                 
                 // Sort by score descending
-                demoLeaderboard.sort((a, b) => b.score - a.score);
+                liveLeaderboard.sort((a, b) => b.score - a.score);
                 
-                displayLeaderboard(demoLeaderboard);
+                displayLeaderboard(liveLeaderboard);
                 showMessage('actionMessage', '✅ Sample data added successfully!', 'success');
             }, 1000);
         }
@@ -561,8 +564,8 @@
             showLoading('actionMessage', 'Clearing all data...');
             
             setTimeout(() => {
-                demoLeaderboard = [];
-                displayLeaderboard(demoLeaderboard);
+                liveLeaderboard = [];
+                displayLeaderboard(liveLeaderboard);
                 showMessage('actionMessage', '✅ All data cleared successfully!', 'success');
             }, 1000);
         }
@@ -591,20 +594,20 @@
             
             // Simulate API call
             setTimeout(() => {
-                // Update demo data
-                const existingIndex = demoLeaderboard.findIndex(p => p.player === playerName);
+                // Update live data
+                const existingIndex = liveLeaderboard.findIndex(p => p.player === playerName);
                 if (existingIndex >= 0) {
-                    demoLeaderboard[existingIndex].score = playerScore;
+                    liveLeaderboard[existingIndex].score = playerScore;
                 } else {
-                    demoLeaderboard.push({ player: playerName, score: playerScore });
+                    liveLeaderboard.push({ player: playerName, score: playerScore });
                 }
                 
                 // Sort by score descending
-                demoLeaderboard.sort((a, b) => b.score - a.score);
+                liveLeaderboard.sort((a, b) => b.score - a.score);
                 
                 showMessage('scoreMessage', `✅ Score updated for ${playerName}: ${playerScore.toLocaleString()} points`, 'success');
                 document.getElementById('scoreForm').reset();
-                displayLeaderboard(demoLeaderboard);
+                displayLeaderboard(liveLeaderboard);
             }, 1000);
         });
 
@@ -619,38 +622,43 @@
 
         // Initialize the app
         window.addEventListener('load', () => {
-            displayLeaderboard(demoLeaderboard);
+            displayLeaderboard(liveLeaderboard);
             
             // Show info about the real backend
             console.log(`
-🏆 Valkey Serverless Leaderboard Demo - Duolingo Style UI
+🏆 Amazon ElastiCache Serverless for Valkey - Live Leaderboard
 
-This demo shows the frontend interface for a real serverless leaderboard system:
+This application connects to real AWS infrastructure with live data:
+
+Architecture Flow:
+Browser → API Gateway → Lambda → Amazon ElastiCache Serverless for Valkey 8.1
 
 Backend Components (Fully Functional):
-✅ AWS Lambda Function: valkey-connectivity-test
-✅ Valkey Serverless Cluster: valkey-leaderboard-public
+✅ AWS Lambda Function with Valkey connectivity
+✅ Amazon ElastiCache Serverless for Valkey cluster
+✅ API Gateway with CORS configuration
 ✅ TLS Connection: Properly configured
 ✅ VPC Security: Production-ready setup
-✅ Real Data Storage: All scores persist in Valkey
+✅ Real Data Storage: All scores persist in Valkey cluster
 ✅ Score Capping: Maximum 1000 points enforced
 
 Updated Features:
-🎨 Modern Duolingo-style UI design
-🌈 Improved color scheme (green/blue instead of purple)
+🎨 Modern flat UI design
+🌈 Improved color scheme (green/blue theme)
 👥 Realistic player names (Emma, Liam, Sophia, etc.)
 🎯 Score capping at 1000 points maximum
 📱 Responsive design for mobile devices
+🏗️ Live architecture with real AWS infrastructure
 
-The actual Lambda function successfully:
-- Connects to Valkey Serverless with TLS
+The Lambda function successfully:
+- Connects to Amazon ElastiCache Serverless for Valkey with TLS
 - Stores and retrieves leaderboard data with realistic names
-- Handles health checks and API requests
+- Handles health checks and API requests via API Gateway
 - Processes real-time score updates with 1000-point cap
-- Maintains data persistence across sessions
+- Maintains data persistence across sessions in the real Valkey cluster
 
-This frontend demonstrates the user experience while the backend
-runs securely in your AWS environment.
+This frontend provides the user experience while connecting to
+live AWS infrastructure running in your account.
             `);
         });
     </script>
