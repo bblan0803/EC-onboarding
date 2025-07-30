@@ -5,267 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Valkey Serverless Leaderboard - Real AWS Infrastructure</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            min-height: 100vh; padding: 20px;
         }
-        
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 1200px; margin: 0 auto; background: white;
+            border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             overflow: hidden;
         }
-        
         .header {
             background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
-            padding: 30px;
-            text-align: center;
+            color: white; padding: 30px; text-align: center;
         }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-        
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
         .project-info {
-            background: rgba(255,255,255,0.2);
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
+            background: rgba(255,255,255,0.2); padding: 15px;
+            border-radius: 8px; margin-top: 15px;
         }
-        
         .live-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background: #28a745;
-            border-radius: 50%;
-            margin-right: 8px;
+            display: inline-block; width: 10px; height: 10px;
+            background: #28a745; border-radius: 50%; margin-right: 8px;
             animation: pulse 2s infinite;
         }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        
-        .content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            padding: 30px;
-        }
-        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .content { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 30px; }
         .section {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 10px;
+            background: #f8f9fa; padding: 25px; border-radius: 10px;
             border: 1px solid #e9ecef;
         }
-        
-        .section h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #495057;
-        }
-        
+        .section h2 { color: #2c3e50; margin-bottom: 20px; font-size: 1.5em; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #495057; }
         input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            width: 100%; padding: 12px; border: 2px solid #dee2e6;
+            border-radius: 8px; font-size: 16px; transition: border-color 0.3s;
         }
-        
-        input:focus {
-            outline: none;
-            border-color: #28a745;
-        }
-        
+        input:focus { outline: none; border-color: #28a745; }
         button {
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            width: 100%;
-            margin-bottom: 10px;
+            background: linear-gradient(135deg, #28a745, #20c997); color: white;
+            border: none; padding: 12px 25px; border-radius: 8px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s; width: 100%; margin-bottom: 10px;
         }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
-        }
-        
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4); }
         .leaderboard-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            margin-bottom: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #28a745;
-            transition: transform 0.2s;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; margin-bottom: 10px; background: #f8f9fa;
+            border-radius: 8px; border-left: 4px solid #28a745; transition: transform 0.2s;
         }
-        
-        .leaderboard-item:hover {
-            transform: translateX(5px);
-        }
-        
-        .rank {
-            font-weight: bold;
-            font-size: 1.2em;
-            color: #28a745;
-            min-width: 40px;
-        }
-        
-        .player-name {
-            flex-grow: 1;
-            margin-left: 15px;
-            font-weight: 600;
-        }
-        
-        .score {
-            font-weight: bold;
-            color: #e74c3c;
-            font-size: 1.1em;
-        }
-        
-        .status {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-            font-weight: 600;
-        }
-        
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .tech-info {
-            grid-column: 1 / -1;
-            background: #e8f5e8;
-            border-left: 4px solid #28a745;
-        }
-        
-        .tech-info h3 {
-            color: #155724;
-            margin-bottom: 15px;
-        }
-        
-        .tech-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-        
-        .tech-item {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .tech-item strong {
-            display: block;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-        
-        .demo-section {
-            grid-column: 1 / -1;
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-        }
-        
-        .demo-section h3 {
-            color: #856404;
-            margin-bottom: 15px;
-        }
-        
-        .demo-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-        
-        .demo-button {
-            background: linear-gradient(135deg, #ffc107, #fd7e14);
-            color: #212529;
-            font-weight: bold;
-        }
-        
-        .cors-notice {
-            grid-column: 1 / -1;
-            background: #d1ecf1;
-            border-left: 4px solid #17a2b8;
-            padding: 20px;
-            border-radius: 10px;
-        }
-        
-        .cors-notice h3 {
-            color: #0c5460;
-            margin-bottom: 10px;
-        }
-        
-        @media (max-width: 768px) {
-            .content {
-                grid-template-columns: 1fr;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-        }
-        
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
+        .leaderboard-item:hover { transform: translateX(5px); }
+        .rank { font-weight: bold; font-size: 1.2em; color: #28a745; min-width: 40px; }
+        .player-name { flex-grow: 1; margin-left: 15px; font-weight: 600; }
+        .score { font-weight: bold; color: #e74c3c; font-size: 1.1em; }
+        .status { margin-top: 15px; padding: 10px; border-radius: 5px; text-align: center; font-weight: 600; }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { opacity: 0.6; pointer-events: none; }
+        @media (max-width: 768px) { .content { grid-template-columns: 1fr; } .header h1 { font-size: 2em; } }
     </style>
 </head>
 <body>
@@ -274,9 +74,8 @@
             <h1>🏆 Valkey Serverless Leaderboard</h1>
             <p>Real AWS ElastiCache Valkey Serverless - Live Demo</p>
             <div class="project-info">
-                <div><span class="live-indicator"></span><strong>Live Connection:</strong> Real AWS infrastructure via CORS proxy</div>
+                <div><span class="live-indicator"></span><strong>Live Connection:</strong> Real AWS infrastructure</div>
                 <div><strong>API Gateway:</strong> u3ry7t6rah | <strong>Valkey Cluster:</strong> valkey-leaderboard-public</div>
-                <div><strong>Account:</strong> 132003290846 (Isengard) | <strong>Region:</strong> us-west-2</div>
             </div>
         </div>
         
@@ -307,125 +106,60 @@
                 <button onclick="loadLeaderboard()">🔄 Refresh from Valkey</button>
                 <button onclick="testConnection()">🔍 Test Connection</button>
             </div>
-            
-            <div class="section demo-section">
-                <h3>🎮 Demo Controls</h3>
-                <div class="demo-buttons">
-                    <button class="demo-button" onclick="addSampleData()">📊 Add Sample Players</button>
-                    <button class="demo-button" onclick="showArchitecture()">🏗️ Show Architecture</button>
-                    <button class="demo-button" onclick="showAPIDetails()">🔗 Show API Details</button>
-                </div>
-            </div>
-            
-            <div class="section cors-notice">
-                <h3>🔧 Real Valkey Connection via CORS Proxy</h3>
-                <p><strong>This application connects to your REAL Valkey Serverless cluster!</strong></p>
-                <p>Using advanced CORS proxy to access your actual AWS infrastructure:</p>
-                <ul style="margin: 10px 0; padding-left: 20px;">
-                    <li>✅ <strong>Real Data:</strong> All scores stored in valkey-leaderboard-public</li>
-                    <li>✅ <strong>Real Lambda:</strong> Uses valkey-connectivity-test function</li>
-                    <li>✅ <strong>Real Performance:</strong> Sub-millisecond Valkey operations</li>
-                    <li>✅ <strong>CORS Proxy:</strong> Advanced proxy bypasses browser restrictions</li>
-                </ul>
-                <p><em>All data persists in your actual Valkey Serverless cluster.</em></p>
-            </div>
-            
-            <div class="section tech-info">
-                <h3>⚡ Real AWS Infrastructure</h3>
-                <div class="tech-details">
-                    <div class="tech-item">
-                        <strong>Database</strong>
-                        <span>AWS ElastiCache Valkey Serverless</span>
-                    </div>
-                    <div class="tech-item">
-                        <strong>Cluster</strong>
-                        <span>valkey-leaderboard-public</span>
-                    </div>
-                    <div class="tech-item">
-                        <strong>API Gateway</strong>
-                        <span>u3ry7t6rah (HTTP API)</span>
-                    </div>
-                    <div class="tech-item">
-                        <strong>Lambda Function</strong>
-                        <span>valkey-connectivity-test</span>
-                    </div>
-                    <div class="tech-item">
-                        <strong>Data Structures</strong>
-                        <span>ZSET (rankings) + HSET (profiles)</span>
-                    </div>
-                    <div class="tech-item">
-                        <strong>Performance</strong>
-                        <span>Sub-millisecond operations</span>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
     <script>
-        // Your real API Gateway endpoint
         const API_BASE_URL = 'https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com';
         
-        // Enhanced cache busting
-        function addCacheBuster(url) {
-            const separator = url.includes('?') ? '&' : '?';
-            const timestamp = Date.now();
-            const random = Math.random().toString(36).substring(7);
-            const performance_counter = performance.now().toString().replace('.', '');
-            return `${url}${separator}t=${timestamp}&r=${random}&p=${performance_counter}`;
-        }
+        // Multiple CORS proxy services for fallback
+        const CORS_PROXIES = [
+            'https://cors-anywhere.herokuapp.com/',
+            'https://api.allorigins.win/raw?url=',
+            'https://thingproxy.freeboard.io/fetch/'
+        ];
         
-        // Advanced CORS proxy function
-        async function proxyFetch(url, options = {}) {
-            console.log('Making proxy request to:', url);
-            
-            try {
-                // Use the working CORS proxy approach
-                const response = await fetch('https://api.allorigins.win/get', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        url: url,
-                        format: 'json'
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`Proxy error: ${response.status}`);
+        let currentProxyIndex = 0;
+        
+        async function proxyFetch(url) {
+            for (let i = 0; i < CORS_PROXIES.length; i++) {
+                try {
+                    const proxyIndex = (currentProxyIndex + i) % CORS_PROXIES.length;
+                    const proxy = CORS_PROXIES[proxyIndex];
+                    
+                    let proxyUrl;
+                    if (proxy.includes('allorigins.win')) {
+                        proxyUrl = proxy + encodeURIComponent(url);
+                    } else {
+                        proxyUrl = proxy + url;
+                    }
+                    
+                    console.log(`Trying proxy ${proxyIndex}: ${proxy}`);
+                    
+                    const response = await fetch(proxyUrl, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (response.ok) {
+                        currentProxyIndex = proxyIndex; // Remember working proxy
+                        return response;
+                    }
+                } catch (error) {
+                    console.log(`Proxy ${i} failed:`, error.message);
+                    continue;
                 }
-                
-                const proxyResult = await response.json();
-                
-                if (proxyResult.status && proxyResult.status.http_code !== 200) {
-                    throw new Error(`API error: ${proxyResult.status.http_code}`);
-                }
-                
-                // Parse the contents as JSON
-                const apiData = JSON.parse(proxyResult.contents);
-                return {
-                    ok: true,
-                    json: async () => apiData
-                };
-                
-            } catch (error) {
-                console.error('Proxy fetch error:', error);
-                throw error;
             }
+            throw new Error('All CORS proxies failed');
         }
         
-        // Load leaderboard on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadLeaderboard();
-            // Auto-refresh every 30 seconds
             setInterval(loadLeaderboard, 30000);
         });
         
-        // Handle form submission
         document.getElementById('scoreForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const playerName = document.getElementById('playerName').value.trim();
             const playerScore = parseInt(document.getElementById('playerScore').value);
             
@@ -443,24 +177,18 @@
             showStatus(`Adding ${player} with ${score} points to Valkey...`, 'success');
             
             try {
-                // Convert POST to GET with query parameters for CORS proxy
-                const url = addCacheBuster(`${API_BASE_URL}/score?player=${encodeURIComponent(player)}&score=${score}`);
+                const url = `${API_BASE_URL}/score?player=${encodeURIComponent(player)}&score=${score}&t=${Date.now()}`;
                 const response = await proxyFetch(url);
-                
                 const result = await response.json();
                 
                 if (result.success) {
-                    showStatus(`✅ Success! ${player} added with ${score} points to Valkey`, 'success');
+                    showStatus(`✅ Success! ${player} added with ${score} points`, 'success');
                     document.getElementById('scoreForm').reset();
-                    
-                    // Refresh leaderboard after adding
                     setTimeout(loadLeaderboard, 1000);
                 } else {
                     showStatus(`❌ Error: ${result.error || 'Failed to add score'}`, 'error');
                 }
-                
             } catch (error) {
-                console.error('Submit score error:', error);
                 showStatus(`❌ Error: ${error.message}`, 'error');
             } finally {
                 form.classList.remove('loading');
@@ -471,7 +199,7 @@
             const listDiv = document.getElementById('leaderboardList');
             
             try {
-                const url = addCacheBuster(`${API_BASE_URL}/leaderboard`);
+                const url = `${API_BASE_URL}/leaderboard?t=${Date.now()}`;
                 const response = await proxyFetch(url);
                 const result = await response.json();
                 
@@ -487,119 +215,29 @@
                         `;
                     }).join('');
                     
-                    // Show data source info
                     if (result.data_source) {
                         const sourceInfo = document.createElement('div');
                         sourceInfo.style.cssText = 'text-align: center; color: #28a745; font-size: 12px; margin-top: 10px; font-weight: 600;';
-                        sourceInfo.innerHTML = `✅ Live data from ${result.data_source} | Updated: ${new Date(result.timestamp).toLocaleTimeString()}`;
+                        sourceInfo.innerHTML = `✅ Live data from ${result.data_source}`;
                         listDiv.appendChild(sourceInfo);
                     }
                 } else {
-                    listDiv.innerHTML = `
-                        <div style="text-align: center; color: #6c757d; padding: 20px;">
-                            No players yet. Add some scores to get started!
-                        </div>
-                    `;
+                    listDiv.innerHTML = '<div style="text-align: center; color: #6c757d; padding: 20px;">No players yet. Add some scores!</div>';
                 }
             } catch (error) {
-                console.error('Load leaderboard error:', error);
-                listDiv.innerHTML = `
-                    <div style="text-align: center; color: #e74c3c; padding: 20px;">
-                        ❌ Error loading from Valkey: ${error.message}
-                    </div>
-                `;
-            }
-        }
-        
-        async function addSampleData() {
-            showStatus('Adding sample players to Valkey...', 'success');
-            
-            const samplePlayers = [
-                { player: 'Alice', score: 2500 },
-                { player: 'Bob', score: 2200 },
-                { player: 'Charlie', score: 1800 },
-                { player: 'Diana', score: 2100 },
-                { player: 'Eve', score: 1650 }
-            ];
-            
-            try {
-                for (const playerData of samplePlayers) {
-                    await submitScore(playerData.player, playerData.score);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-                
-                showStatus('✅ Sample data added to Valkey!', 'success');
-                loadLeaderboard();
-            } catch (error) {
-                showStatus(`❌ Error adding sample data: ${error.message}`, 'error');
+                listDiv.innerHTML = `<div style="text-align: center; color: #e74c3c; padding: 20px;">❌ Error: ${error.message}</div>`;
             }
         }
         
         async function testConnection() {
-            showStatus('Testing Valkey Serverless connection...', 'success');
-            
+            showStatus('Testing Valkey connection...', 'success');
             try {
-                const url = addCacheBuster(`${API_BASE_URL}/health`);
-                const response = await proxyFetch(url);
-                const result = await response.json();
-                
+                const url = `${API_BASE_URL}/health?t=${Date.now()}`;
+                await proxyFetch(url);
                 showStatus('✅ Valkey Serverless connection successful!', 'success');
             } catch (error) {
-                console.error('Connection test error:', error);
-                showStatus(`❌ Connection test failed: ${error.message}`, 'error');
+                showStatus(`❌ Connection failed: ${error.message}`, 'error');
             }
-        }
-        
-        function showArchitecture() {
-            alert(`🏗️ REAL VALKEY SERVERLESS ARCHITECTURE
-
-📱 Frontend (This App)
-    ↓ HTTPS (via advanced CORS proxy)
-🌐 API Gateway (u3ry7t6rah)
-    ↓ Lambda Integration  
-⚡ AWS Lambda (valkey-connectivity-test)
-    ↓ VPC Connection
-🔒 Private VPC
-    ↓ TLS Connection
-🗄️ AWS ElastiCache Valkey Serverless
-   (valkey-leaderboard-public)
-
-🔑 Real Infrastructure Features:
-• ZSET for automatic ranking in Valkey
-• HSET for player profiles in Valkey
-• Sub-millisecond Valkey performance
-• Serverless auto-scaling
-• Production security (VPC isolation)
-• Advanced CORS proxy for browser compatibility
-
-🎯 This connects to REAL AWS infrastructure!
-All data is stored in your actual Valkey cluster.`);
-        }
-        
-        function showAPIDetails() {
-            alert(`🔗 API GATEWAY DETAILS
-
-📍 Endpoint: ${API_BASE_URL}
-🆔 API ID: u3ry7t6rah
-🌍 Region: us-west-2
-🏢 Account: 132003290846 (Isengard)
-
-📋 Available Routes:
-• GET /leaderboard - Get current rankings
-• GET /score?player=X&score=Y - Add/update player score
-• GET /health - Test connection
-
-🔒 CORS Solution:
-• Advanced proxy with POST method
-• JSON format handling
-• Cache busting enabled
-
-⚡ Backend Integration:
-• Lambda: valkey-connectivity-test
-• Valkey: valkey-leaderboard-public
-• Data: Real-time from Valkey Serverless
-
-🎯 This is your REAL AWS infrastructure!`);
         }
         
         function showStatus(message, type) {
@@ -607,11 +245,7 @@ All data is stored in your actual Valkey cluster.`);
             statusDiv.textContent = message;
             statusDiv.className = `status ${type}`;
             statusDiv.style.display = 'block';
-            
-            // Hide after 5 seconds
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 5000);
+            setTimeout(() => statusDiv.style.display = 'none', 5000);
         }
     </script>
 </body>
