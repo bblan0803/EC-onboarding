@@ -1,330 +1,316 @@
-# 🏆 Valkey Serverless Leaderboard - Production Ready
+# ⚡ Real-time Leaderboard - Powered by Amazon ElastiCache Serverless for Valkey 8.1
 
-A **fully functional**, serverless leaderboard application built with **AWS Lambda (Python)** and **ElastiCache Valkey Serverless**. This implementation demonstrates real-world usage patterns for gaming, social apps, and IoT applications with **proven TLS connectivity** and **production-ready architecture**.
+A modern, real-time gaming leaderboard built with Amazon ElastiCache Serverless for Valkey, AWS Lambda, and API Gateway. Features a beautiful, responsive UI with live data persistence and automatic score ranking.
 
-## 🎯 **Live Demo: FULLY OPERATIONAL** ✅
-
-**🌐 Live Website**: [GitHub Pages Deployment](https://YOUR-USERNAME.github.io/valkey-leaderboard-github)
-
-**🚀 Public API Endpoints**:
-- **Health Check**: `https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com/health`
-- **Leaderboard**: `https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com/leaderboard`
-- **Score Submission**: `https://u3ry7t6rah.execute-api.us-west-2.amazonaws.com/score`
-
-## 🏗️ **Architecture**
+## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│   GitHub Pages  │────│   API Gateway    │────│  Lambda Function │────│  ElastiCache Valkey │
-│   (Frontend)    │    │   (Public API)   │    │   (Python 3.9)   │    │    Serverless       │
-└─────────────────┘    └──────────────────┘    └──────────────────┘    └─────────────────────┘
-         │                        │                        │                         │
-    ┌─────────┐              ┌──────────┐              ┌──────────┐              ┌──────────┐
-    │  HTTPS  │              │   CORS   │              │   VPC    │              │   TLS    │
-    │  Static │              │ Enabled  │              │ Subnets  │              │Encryption│
-    └─────────┘              └──────────┘              └──────────┘              └──────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           VALKEY LEADERBOARD SYSTEM                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────────────┐
+│                 │    │                  │    │                             │
+│   API Gateway   │────│  Lambda Function │────│    ElastiCache Valkey       │
+│   (HTTP API)    │    │   (Python 3.9)   │    │       Serverless            │
+│                 │    │                  │    │                             │
+└─────────────────┘    └──────────────────┘    └─────────────────────────────┘
+         │                        │                         │
+         │                        │                         │
+    HTTP Requests            VPC Network              TLS Encryption
+         │                        │                         │
+         │                        │                         │
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────────────┐
+│                 │    │                  │    │                             │
+│ Client Apps     │    │ Security Groups  │    │    Data Structures          │
+│ • Web Apps      │    │ • Port 6379      │    │ • Hash: User Profiles       │
+│ • Mobile Apps   │    │ • TLS Security   │    │ • Sorted Set: Leaderboard   │
+│ • GitHub Pages  │    │ • VPC Isolation  │    │ • String+TTL: Sessions      │
+│                 │    │                  │    │                             │
+└─────────────────┘    └──────────────────┘    └─────────────────────────────┘
 ```
 
-### **Production Components**
-
-- **GitHub Pages**: Static website hosting (free, global CDN)
-- **API Gateway**: Public HTTP API with CORS support
-- **AWS Lambda**: Python 3.9 runtime with VPC configuration
-- **ElastiCache Valkey Serverless**: Auto-scaling in-memory database
-- **VPC Security**: Private subnets with security groups
-- **TLS Encryption**: End-to-end encryption for all connections
+**Data Flow:**
+1. **User** interacts with web interface (GitHub Pages)
+2. **API Gateway** handles HTTP requests with CORS
+3. **Lambda** processes business logic in VPC
+4. **ElastiCache Serverless for Valkey** stores leaderboard data with TLS
+5. **Real-time updates** flow back through the same path
 
 ## 🚀 Features
 
-### Core Functionality
-- **User Profiles**: Create and manage user accounts with game statistics
-- **Real-time Leaderboards**: Global rankings with fast read/write operations
-- **Score Management**: Update player scores with automatic ranking
-- **Rank Queries**: Get user rank and nearby players
-- **Game Statistics**: Track global game metrics
+- **⚡ Real-time Updates**: Live leaderboard with instant score updates
+- **🎨 Modern UI**: Clean, responsive design with smooth animations
+- **☁️ Serverless Architecture**: Fully managed AWS infrastructure
+- **🔒 Secure**: TLS encryption, VPC isolation, CORS configuration
+- **📱 Mobile-Friendly**: Responsive design works on all devices
+- **🎯 Score Validation**: Automatic score capping and validation
+- **🏆 Live Rankings**: Automatic sorting and ranking system
 
-### Data Structures Used
-- **Hash Maps**: User profile storage (`user:{userId}`)
-- **Sorted Sets**: Leaderboard rankings (`leaderboard:global`)
-- **Strings with TTL**: Session management (stretch goal)
+## 🛠️ Technology Stack
 
-### Performance Characteristics
-- **Response Time**: ~81ms average for all operations
-- **Connectivity**: 100% success rate with proper TLS configuration
-- **Scalability**: Serverless auto-scaling for both compute and cache
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript
+- **Backend**: AWS Lambda (Python 3.9)
+- **Database**: Amazon ElastiCache Serverless for Valkey 8.1
+- **API**: AWS API Gateway with CORS
+- **Infrastructure**: AWS VPC, Security Groups, TLS
 
-## 📋 API Endpoints
+## 📋 Prerequisites
 
-### User Management
-```http
-POST /users
-GET /users/{userId}
-PUT /users/{userId}/score
-```
+To deploy your own version, you'll need:
 
-### Leaderboard
-```http
-GET /leaderboard?limit=10
-GET /users/{userId}/rank
-GET /users/{userId}/nearby?range=5
-```
+- AWS Account with appropriate permissions
+- AWS CLI configured
+- Basic knowledge of AWS services (Lambda, API Gateway, ElastiCache)
 
-### Game Statistics
-```http
-GET /stats
-```
+## 🚀 Quick Start
 
-### Health & Monitoring
-```http
-GET /health
-```
-
-### Session Management (Stretch Goal)
-```http
-POST /sessions
-GET /sessions/{sessionId}
-```
-
-## 🛠️ Deployment Steps
-
-### Prerequisites
-- AWS CLI configured with appropriate permissions
-- Node.js 18+ installed
-- Access to create VPC, Lambda, and ElastiCache resources
-
-### 1. Create ElastiCache Valkey Serverless
-
+### 1. Clone the Repository
 ```bash
-# Create the Valkey Serverless cache
-aws elasticache create-serverless-cache \
-  --serverless-cache-name valkey-leaderboard \
-  --engine valkey \
-  --description "Leaderboard cache for gaming application"
+git clone https://github.com/YOUR_USERNAME/valkey-serverless-leaderboard.git
+cd valkey-serverless-leaderboard
 ```
 
-### 2. Set up VPC and Security Groups
+### 2. Deploy AWS Infrastructure
 
-```bash
-# Create security group for Lambda and Valkey
-aws ec2 create-security-group \
-  --group-name valkey-leaderboard-sg \
-  --description "Security group for Valkey leaderboard application"
+1. **Create ElastiCache Serverless for Valkey cluster**
+2. **Deploy Lambda function** with Valkey connectivity
+3. **Set up API Gateway** with proper CORS configuration
+4. **Configure VPC and security groups**
 
-# Add inbound rules for Redis ports
-aws ec2 authorize-security-group-ingress \
-  --group-id sg-xxxxxxxxx \
-  --protocol tcp \
-  --port 6379 \
-  --source-group sg-xxxxxxxxx
+### 3. Update Configuration
 
-aws ec2 authorize-security-group-ingress \
-  --group-id sg-xxxxxxxxx \
-  --protocol tcp \
-  --port 6380 \
-  --source-group sg-xxxxxxxxx
-```
-
-### 3. Deploy Lambda Function
-
-```bash
-# Install dependencies
-npm install
-
-# Package the application
-npm run package
-
-# Create Lambda function
-aws lambda create-function \
-  --function-name valkey-leaderboard \
-  --runtime nodejs18.x \
-  --role arn:aws:iam::ACCOUNT:role/lambda-execution-role \
-  --handler src/handler.handler \
-  --zip-file fileb://deployment.zip \
-  --timeout 60 \
-  --memory-size 512 \
-  --vpc-config SubnetIds=subnet-xxx,subnet-yyy,SecurityGroupIds=sg-zzz \
-  --environment Variables='{CACHE_ENDPOINT=your-cache-endpoint}'
-```
-
-### 4. Set up API Gateway
-
-```bash
-# Create REST API
-aws apigateway create-rest-api \
-  --name valkey-leaderboard-api \
-  --description "Leaderboard API using Valkey"
-
-# Configure API Gateway integration with Lambda
-# (Additional API Gateway configuration steps...)
-```
-
-### 5. Environment Variables
-
-Set the following environment variables in your Lambda function:
-
-```bash
-CACHE_ENDPOINT=your-valkey-serverless-endpoint
-NODE_ENV=production
-```
-
-## 🧪 Local Development
-
-### Run Locally
-
-```bash
-# Install dependencies
-npm install
-
-# Set environment variable
-export CACHE_ENDPOINT=your-valkey-endpoint
-
-# Start local server
-npm run local
-```
-
-The API will be available at `http://localhost:3000`
-
-### Test Endpoints
-
-```bash
-# Health check
-curl http://localhost:3000/health
-
-# Create a user
-curl -X POST http://localhost:3000/users \
-  -H "Content-Type: application/json" \
-  -d '{"username": "player1", "email": "player1@example.com"}'
-
-# Update user score
-curl -X PUT http://localhost:3000/users/{userId}/score \
-  -H "Content-Type: application/json" \
-  -d '{"score": 1500, "gameData": {"level": "expert"}}'
-
-# Get leaderboard
-curl http://localhost:3000/leaderboard?limit=10
-
-# Get user rank
-curl http://localhost:3000/users/{userId}/rank
-```
-
-## 📊 Performance Metrics
-
-Based on our testing with ElastiCache Valkey Serverless:
-
-- **Average Response Time**: 81ms
-- **Connection Success Rate**: 100%
-- **Memory Usage**: 512MB Lambda optimal
-- **Concurrent Users**: Tested up to 100 simultaneous requests
-- **Data Persistence**: All operations maintain consistency
-
-## 🔧 Configuration Details
-
-### Lambda Configuration
+Edit `index.html` and replace the API URL:
 ```javascript
-{
-  "Runtime": "nodejs18.x",
-  "MemorySize": 512,
-  "Timeout": 60,
-  "VpcConfig": {
-    "SubnetIds": ["subnet-xxx", "subnet-yyy"],
-    "SecurityGroupIds": ["sg-zzz"]
-  }
-}
+const API_URL = 'YOUR_API_GATEWAY_URL_HERE'; // Replace with your API Gateway URL
 ```
 
-### Valkey Client Configuration
-```javascript
-const redis = new Redis({
-  host: process.env.CACHE_ENDPOINT,
-  port: 6379,
-  tls: {},  // Required for ElastiCache Serverless
-  connectTimeout: 10000,
-  lazyConnect: true,
-  retryDelayOnFailover: 100,
-  maxRetriesPerRequest: 3
-});
-```
+### 4. Deploy to GitHub Pages
 
-## 🎯 Use Cases Demonstrated
+1. Push your code to GitHub
+2. Enable GitHub Pages in repository settings
+3. Point to `index.html` as the main page
 
-1. **Gaming Leaderboards**: Real-time player rankings
-2. **Social Applications**: User profiles and activity tracking
-3. **IoT Applications**: Device scoring and performance metrics
-4. **E-commerce**: Customer loyalty points and rankings
+## 🎮 Usage
 
-## 🔍 Key Learnings
+1. **Add Scores**: Enter player name and score (max 1000 points)
+2. **View Leaderboard**: See real-time rankings with live updates
+3. **Test Connection**: Use the health check to verify connectivity
+4. **Refresh Data**: Manually refresh to see latest scores
 
-### ElastiCache Valkey Serverless Benefits
-- **No Infrastructure Management**: Fully managed scaling
-- **Built-in Security**: TLS encryption by default
-- **Cost Effective**: Pay only for what you use
-- **High Performance**: Sub-100ms response times
+## 🔧 API Endpoints
 
-### Developer Experience Insights
-- **VPC Configuration**: Mandatory for Serverless (unlike traditional ElastiCache)
-- **TLS Requirement**: Must configure clients for TLS connections
-- **Lambda Optimization**: 512MB memory recommended for VPC environments
-- **Error Handling**: Implement proper retry logic for network operations
+- `GET /health` - Health check and connectivity test
+- `GET /leaderboard` - Retrieve current leaderboard
+- `POST /score` - Add or update player score
 
-## 🚧 Stretch Goals Implementation
+## 🏆 Sample Data
 
-### Session Caching
-- Implemented ephemeral session storage with TTL
-- Automatic session cleanup after 1 hour
-- Session-based game state management
+The leaderboard comes with realistic sample data:
+- Players with varied, realistic names
+- Scores distributed between 500-1000 points
+- Proper ranking and sorting
 
-### Infrastructure as Code
-See `infrastructure/` directory for:
-- CloudFormation templates
-- CDK constructs
-- Terraform configurations
+## 🔒 Security Features
 
-### Multi-AZ Configuration
-- Valkey Serverless automatically handles multi-AZ
-- Lambda deployed across multiple subnets
-- API Gateway with regional endpoints
+- **TLS Encryption**: All data in transit is encrypted
+- **VPC Isolation**: Database runs in private VPC
+- **CORS Configuration**: Proper cross-origin resource sharing
+- **Input Validation**: Score limits and data validation
+- **Rate Limiting**: API Gateway throttling protection
 
-## 📈 Monitoring and Observability
+## 📱 Responsive Design
 
-### CloudWatch Metrics
-- Lambda execution duration
-- ElastiCache connection count
-- API Gateway request/response metrics
-- Error rates and success rates
+- **Desktop**: Full-featured experience with all controls
+- **Tablet**: Optimized layout with touch-friendly interface
+- **Mobile**: Compact design with essential functionality
 
-### Logging
-- Structured JSON logging
-- Request/response correlation IDs
-- Performance timing logs
-- Error stack traces
+## 🎨 UI Features
 
-## 🔐 Security Considerations
+- **Modern Flat Design**: Clean, professional appearance
+- **Smooth Animations**: Hover effects and transitions
+- **Color-Coded Rankings**: Visual distinction for top players
+- **Loading States**: Clear feedback during operations
+- **Error Handling**: User-friendly error messages
 
-- **TLS Encryption**: All data in transit encrypted
-- **VPC Isolation**: Private network communication
-- **IAM Roles**: Least privilege access
-- **API Authentication**: Ready for API Gateway authorizers
-- **Input Validation**: Sanitized user inputs
+## 🚀 Performance
+
+- **Sub-millisecond Queries**: Valkey's high-performance data structure
+- **Serverless Scaling**: Automatic scaling based on demand
+- **CDN Delivery**: Fast content delivery via GitHub Pages
+- **Optimized Code**: Minimal JavaScript for fast loading
+
+## 📊 Monitoring
+
+- **Real-time Logs**: CloudWatch integration for monitoring
+- **Health Checks**: Built-in connectivity testing
+- **Error Tracking**: Comprehensive error logging
+- **Performance Metrics**: Response time and throughput tracking
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests
+4. Test thoroughly
 5. Submit a pull request
 
 ## 📄 License
 
-MIT License - see LICENSE file for details
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Amazon Web Services** for the robust cloud infrastructure
+- **Valkey Community** for the high-performance data store
+- **Open Source Community** for inspiration and best practices
 
 ## 📞 Support
 
 For questions or issues:
-- Create a GitHub issue
-- Contact: mbh@amazon.com
-- AWS Support for ElastiCache questions
+1. Check the documentation in this repository
+2. Review AWS ElastiCache Serverless documentation
+3. Open an issue on GitHub
 
 ---
 
-**Built with ❤️ using AWS ElastiCache Valkey Serverless**
+**Built with ❤️ using Amazon ElastiCache Serverless for Valkey 8.1**
+
+## 🚀 Features
+
+- **⚡ Real-time Updates**: Live leaderboard with instant score updates
+- **🎨 Modern UI**: Clean, responsive design with smooth animations
+- **☁️ Serverless Architecture**: Fully managed AWS infrastructure
+- **🔒 Secure**: TLS encryption, VPC isolation, CORS configuration
+- **📱 Mobile-Friendly**: Responsive design works on all devices
+- **🎯 Score Validation**: Automatic score capping and validation
+- **🏆 Live Rankings**: Automatic sorting and ranking system
+
+## 🛠️ Technology Stack
+
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript
+- **Backend**: AWS Lambda (Python 3.9)
+- **Database**: Amazon ElastiCache Serverless for Valkey 8.1
+- **API**: AWS API Gateway with CORS
+- **Infrastructure**: AWS VPC, Security Groups, TLS
+
+## 📋 Prerequisites
+
+To deploy your own version, you'll need:
+
+- AWS Account with appropriate permissions
+- AWS CLI configured
+- Basic knowledge of AWS services (Lambda, API Gateway, ElastiCache)
+
+## 🚀 Quick Start
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/YOUR_USERNAME/valkey-serverless-leaderboard.git
+cd valkey-serverless-leaderboard
+```
+
+### 2. Deploy AWS Infrastructure
+
+1. **Create ElastiCache Serverless for Valkey cluster**
+2. **Deploy Lambda function** with Valkey connectivity
+3. **Set up API Gateway** with proper CORS configuration
+4. **Configure VPC and security groups**
+
+### 3. Update Configuration
+
+Edit `index.html` and replace the API URL:
+```javascript
+const API_URL = 'YOUR_API_GATEWAY_URL_HERE'; // Replace with your API Gateway URL
+```
+
+### 4. Deploy to GitHub Pages
+
+1. Push your code to GitHub
+2. Enable GitHub Pages in repository settings
+3. Point to `index.html` as the main page
+
+## 🎮 Usage
+
+1. **Add Scores**: Enter player name and score (max 1000 points)
+2. **View Leaderboard**: See real-time rankings with live updates
+3. **Test Connection**: Use the health check to verify connectivity
+4. **Refresh Data**: Manually refresh to see latest scores
+
+## 🔧 API Endpoints
+
+- `GET /health` - Health check and connectivity test
+- `GET /leaderboard` - Retrieve current leaderboard
+- `POST /score` - Add or update player score
+
+## 🏆 Sample Data
+
+The leaderboard comes with realistic sample data:
+- Players with varied, realistic names
+- Scores distributed between 500-1000 points
+- Proper ranking and sorting
+
+## 🔒 Security Features
+
+- **TLS Encryption**: All data in transit is encrypted
+- **VPC Isolation**: Database runs in private VPC
+- **CORS Configuration**: Proper cross-origin resource sharing
+- **Input Validation**: Score limits and data validation
+- **Rate Limiting**: API Gateway throttling protection
+
+## 📱 Responsive Design
+
+- **Desktop**: Full-featured experience with all controls
+- **Tablet**: Optimized layout with touch-friendly interface
+- **Mobile**: Compact design with essential functionality
+
+## 🎨 UI Features
+
+- **Modern Flat Design**: Clean, professional appearance
+- **Smooth Animations**: Hover effects and transitions
+- **Color-Coded Rankings**: Visual distinction for top players
+- **Loading States**: Clear feedback during operations
+- **Error Handling**: User-friendly error messages
+
+## 🚀 Performance
+
+- **Sub-millisecond Queries**: Valkey's high-performance data structure
+- **Serverless Scaling**: Automatic scaling based on demand
+- **CDN Delivery**: Fast content delivery via GitHub Pages
+- **Optimized Code**: Minimal JavaScript for fast loading
+
+## 📊 Monitoring
+
+- **Real-time Logs**: CloudWatch integration for monitoring
+- **Health Checks**: Built-in connectivity testing
+- **Error Tracking**: Comprehensive error logging
+- **Performance Metrics**: Response time and throughput tracking
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Amazon Web Services** for the robust cloud infrastructure
+- **Valkey Community** for the high-performance data store
+- **Open Source Community** for inspiration and best practices
+
+## 📞 Support
+
+For questions or issues:
+1. Check the documentation in this repository
+2. Review AWS ElastiCache Serverless documentation
+3. Open an issue on GitHub
+
+---
+
+**Built with ❤️ using Amazon ElastiCache Serverless for Valkey 8.1**

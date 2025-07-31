@@ -1,0 +1,39 @@
+{
+  "name": "valkey-leaderboard",
+  "version": "1.0.0",
+  "description": "A high-performance leaderboard application using AWS ElastiCache Valkey Serverless",
+  "main": "src/handler.js",
+  "scripts": {
+    "test": "jest",
+    "deploy": "aws lambda update-function-code --function-name valkey-leaderboard --zip-file fileb://deployment.zip",
+    "package": "zip -r deployment.zip src/ node_modules/",
+    "local": "node src/local-server.js"
+  },
+  "dependencies": {
+    "ioredis": "^5.3.2",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "keywords": [
+    "aws",
+    "elasticache",
+    "valkey",
+    "redis",
+    "leaderboard",
+    "gaming",
+    "serverless"
+  ],
+  "author": "AWS ElastiCache Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aws-samples/valkey-leaderboard"
+  }
+}
